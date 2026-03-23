@@ -8,10 +8,12 @@ import { AppShell } from "@/src/components/layout/app-shell";
 import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
 import { Panel, PanelHeader } from "@/src/components/ui/panel";
+import type { AuthSession } from "@/src/lib/auth/types";
 import type { ExportPreviewPayload } from "@/src/lib/types/api";
 import { formatDateTime } from "@/src/lib/utils";
 
 interface ExportPreviewViewProps {
+  initialSession?: AuthSession | null;
   preview: ExportPreviewPayload;
 }
 
@@ -22,7 +24,10 @@ interface PreviewSlide {
   body: string;
 }
 
-export function ExportPreviewView({ preview }: ExportPreviewViewProps) {
+export function ExportPreviewView({
+  initialSession = null,
+  preview,
+}: ExportPreviewViewProps) {
   const slides = useMemo(() => buildSlides(preview), [preview]);
   const [activeSlideId, setActiveSlideId] = useState(slides[0]?.id ?? "");
   const activeSlide = slides.find((slide) => slide.id === activeSlideId) ?? slides[0] ?? null;
@@ -50,6 +55,7 @@ export function ExportPreviewView({ preview }: ExportPreviewViewProps) {
       }
       description="Review the slide rhythm, tighten branch narratives, and confirm the export is ready for a deck or written report."
       eyebrow="Export preview"
+      initialSession={initialSession}
       title="Narrative preview"
     >
       <div className="print-hidden print-sheet grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">

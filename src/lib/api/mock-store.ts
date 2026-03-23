@@ -31,6 +31,8 @@ import {
   detectFrameworkFromText,
   resolveFrameworkRecommendationContext,
 } from "@/src/lib/workspace/frameworks";
+import { QonyApiError } from "@/src/lib/api/core";
+import { readBranchIndex } from "@/src/lib/workspace/graph-layout";
 import { getNextRank } from "@/src/lib/workspace/ranks";
 import { slugify } from "@/src/lib/utils";
 
@@ -209,6 +211,38 @@ const seedProjects: SeedProject[] = [
       },
       {
         id: "m6",
+        rank: 4,
+        title: "Measure consulting ROI inside active case cycles",
+        content:
+          "Pilot teams can quantify time saved and show value within live engagements.",
+        branchIndex: 0,
+      },
+      {
+        id: "m7",
+        rank: 4,
+        title: "Map adoption triggers across planning cadences",
+        content:
+          "Recurring planning rituals create reuse, but rollout and change management move more slowly.",
+        branchIndex: 1,
+      },
+      {
+        id: "m8",
+        rank: 5,
+        title: "Pilot teams show visible week-one time savings",
+        content:
+          "Early consulting pilots can demonstrate faster synthesis and clearer branch ownership within days.",
+        branchIndex: 0,
+      },
+      {
+        id: "m9",
+        rank: 5,
+        title: "Planning teams show stronger long-run stickiness",
+        content:
+          "Internal strategy groups become sticky once templates and review rituals are in place, but the proof cycle is longer.",
+        branchIndex: 1,
+      },
+      {
+        id: "m10",
         rank: 6,
         title: "Start with consulting-style teams, then expand into internal strategy",
         content:
@@ -222,7 +256,11 @@ const seedProjects: SeedProject[] = [
       { source: "m2", target: "m4" },
       { source: "m3", target: "m5" },
       { source: "m4", target: "m6" },
-      { source: "m5", target: "m6" },
+      { source: "m5", target: "m7" },
+      { source: "m6", target: "m8" },
+      { source: "m7", target: "m9" },
+      { source: "m8", target: "m10" },
+      { source: "m9", target: "m10" },
     ],
   },
   {
@@ -452,6 +490,13 @@ function validateGraph(
     });
   }
 
+  if (roots.length > 1) {
+    issues.push({
+      code: "multiple_roots",
+      message: "A valid workspace can only have one Rank 1 node.",
+    });
+  }
+
   nodes.forEach((node) => {
     if (node.rank !== 1 && !edges.some((edge) => edge.target === node.id)) {
       issues.push({
@@ -462,7 +507,8 @@ function validateGraph(
     }
   });
 
-  const completeBranchCount = countCompleteBranches(roots, adjacency, nodeMap);
+  const completeBranchCount =
+    issues.length === 0 ? countCompleteBranches(roots, adjacency, nodeMap) : 0;
 
   return {
     is_valid: issues.length === 0,
@@ -477,34 +523,67 @@ function countCompleteBranches(
   adjacency: Map<string, string[]>,
   nodeMap: Map<string, GraphNode>,
 ) {
-  let completeCount = 0;
+  return deriveCompleteNodePaths(roots, adjacency, nodeMap).length;
+}
 
-  function walk(nodeId: string) {
-    const node = nodeMap.get(nodeId);
-    if (!node) {
+function deriveCompleteNodePaths(
+  roots: GraphNode[],
+  adjacency: Map<string, string[]>,
+  nodeMap: Map<string, GraphNode>,
+) {
+  const paths: GraphNode[][] = [];
+
+  function walk(path: GraphNode[]) {
+    const current = path[path.length - 1];
+    const nextIds = adjacency.get(current.id) ?? [];
+
+    if (nextIds.length === 0) {
+      if (
+        path.length === 6 &&
+        current.rank === 6 &&
+        path.every((node, index) => node.rank === index + 1)
+      ) {
+        paths.push(path);
+      }
       return;
     }
 
-    const children = adjacency.get(nodeId) ?? [];
-    if (children.length === 0 && node.rank === 6) {
-      completeCount += 1;
-    }
+    nextIds.forEach((id) => {
+      const nextNode = nodeMap.get(id);
+      if (!nextNode || path.some((node) => node.id === nextNode.id)) {
+        return;
+      }
 
-    children.forEach(walk);
+      walk([...path, nextNode]);
+    });
   }
 
-  roots.forEach((root) => walk(root.id));
-  return completeCount;
+  roots.forEach((root) => walk([root]));
+  return paths;
+}
+
+function summarizeValidationIssues(issues: GraphValidationIssue[]) {
+  return issues
+    .slice(0, 2)
+    .map((issue) => issue.message)
+    .join(" ");
 }
 
 function buildExportPreview(workspace: WorkspacePayload): ExportPreviewPayload {
-  const chains = deriveChains(workspace.graph);
-  const warnings =
-    chains.length === 0
+  const validation = workspace.graph.metadata.validation;
+  const chains = validation.is_valid ? deriveChains(workspace.graph) : [];
+  const warnings = [
+    ...(!validation.is_valid
+      ? [
+          `Resolve workspace validation issues before exporting. ${summarizeValidationIssues(validation.issues)}`.trim(),
+        ]
+      : []),
+    ...(chains.length === 0
       ? [
           "No complete rank-1-to-rank-6 branch is available yet. Finish at least one branch before exporting.",
         ]
-      : [];
+      : []),
+  ];
 
   return {
     snapshot_id: `snapshot-${workspace.project_id}-${workspace.graph.metadata.version}`,
@@ -516,7 +595,9 @@ function buildExportPreview(workspace: WorkspacePayload): ExportPreviewPayload {
     narrative:
       chains.length > 0
         ? `Qony prepared ${chains.length} exportable logic branch${chains.length > 1 ? "es" : ""}. Review the active slide stream to tighten the final storyline before exporting.`
-        : "The workspace is still forming. Use the graph editor or copilot to complete at least one end-to-end branch.",
+        : validation.is_valid
+          ? "The workspace is still forming. Use the graph editor or copilot to complete at least one end-to-end branch."
+          : "The workspace cannot be exported yet. Resolve the validation issues in the canvas, then generate the preview again.",
     warnings,
   };
 }
@@ -528,44 +609,23 @@ function deriveChains(graph: WorkspaceGraph): ExportChain[] {
     adjacency.set(edge.source, [...(adjacency.get(edge.source) ?? []), edge.target]);
   });
 
-  const chains: ExportChain[] = [];
   const roots = graph.nodes.filter((node) => node.rank === 1);
-
-  function walk(path: GraphNode[]) {
-    const current = path[path.length - 1];
-    const nextIds = adjacency.get(current.id) ?? [];
-    if (nextIds.length === 0) {
-      if (current.rank === 6) {
-        chains.push({
-          chain_id: `chain-${chains.length + 1}`,
-          steps: path.map((node) => ({
-            node_id: node.id,
-            rank: node.rank,
-            kind: node.kind,
-            title: node.title,
-            content: node.content,
-          })),
-        });
-      }
-      return;
-    }
-
-    nextIds.forEach((id) => {
-      const nextNode = nodeMap.get(id);
-      if (nextNode) {
-        walk([...path, nextNode]);
-      }
-    });
-  }
-
-  roots.forEach((root) => walk([root]));
-  return chains;
+  return deriveCompleteNodePaths(roots, adjacency, nodeMap).map((path, index) => ({
+    chain_id: `chain-${index + 1}`,
+    steps: path.map((node) => ({
+      node_id: node.id,
+      rank: node.rank,
+      kind: node.kind,
+      title: node.title,
+      content: node.content,
+    })),
+  }));
 }
 
 function readProject(projectId: string) {
   const project = mockDatabase.projects[projectId];
   if (!project) {
-    throw new Error(`Project ${projectId} not found.`);
+    throw new QonyApiError(`Project ${projectId} not found.`, 404);
   }
   return project;
 }
@@ -573,7 +633,7 @@ function readProject(projectId: string) {
 function readWorkspace(projectId: string) {
   const workspace = mockDatabase.workspaces[projectId];
   if (!workspace) {
-    throw new Error(`Workspace ${projectId} not found.`);
+    throw new QonyApiError(`Workspace ${projectId} not found.`, 404);
   }
   return workspace;
 }
@@ -630,10 +690,78 @@ function rebuildWorkspaceGraph(
   };
 }
 
+function assertExpectedVersion(
+  workspace: WorkspacePayload,
+  expectedVersion?: number | null,
+) {
+  if (
+    typeof expectedVersion === "number" &&
+    expectedVersion !== workspace.graph.metadata.version
+  ) {
+    throw new QonyApiError(
+      "Workspace version conflict. Refresh the canvas and retry your change.",
+      409,
+    );
+  }
+}
+
+function assertSingleRootConstraint(
+  workspace: WorkspacePayload,
+  commands: MutationCommand[],
+) {
+  const rootIds = new Set(
+    workspace.graph.nodes
+      .filter((node) => node.rank === 1)
+      .map((node) => node.id),
+  );
+  let syntheticRootCount = 0;
+
+  commands.forEach((command) => {
+    if (command.type === "delete_node") {
+      rootIds.delete(command.node_id);
+      return;
+    }
+
+    if (
+      (command.type === "update_node" || command.type === "move_node") &&
+      command.rank !== undefined
+    ) {
+      if (command.rank === 1 && !rootIds.has(command.node_id) && rootIds.size > 0) {
+        throw new QonyApiError(
+          "Only one Rank 1 root node is allowed in a workspace.",
+          422,
+        );
+      }
+
+      if (command.rank === 1) {
+        rootIds.add(command.node_id);
+      } else {
+        rootIds.delete(command.node_id);
+      }
+
+      return;
+    }
+
+    if (command.type === "add_node" && command.node.rank === 1) {
+      if (rootIds.size > 0) {
+        throw new QonyApiError(
+          "Only one Rank 1 root node is allowed in a workspace.",
+          422,
+        );
+      }
+
+      rootIds.add(command.node.id ?? `pending-root-${syntheticRootCount}`);
+      syntheticRootCount += 1;
+    }
+  });
+}
+
 function applyWorkspaceCommands(
   workspace: WorkspacePayload,
   commands: MutationCommand[],
 ): WorkspacePayload {
+  assertSingleRootConstraint(workspace, commands);
+
   let currentGraph = clone(workspace.graph);
   const now = nowIso();
 
@@ -823,18 +951,6 @@ function buildIngestWorkspace(
         branchIndex: branchIndexB,
         offset: 2,
       }),
-      createGraphNode({
-        id: nextId("synthesis"),
-        rank: 6,
-        title: "Draft synthesis from ingest",
-        content:
-          "Use the workspace copilot to expand hypotheses, frameworks, and evidence from the initial extracted structure.",
-        source: "ai",
-        createdAt: timestamp,
-        updatedAt: timestamp,
-        branchIndex: branchIndexA,
-        offset: 3,
-      }),
     ],
     edges: [],
     metadata: {
@@ -855,7 +971,6 @@ function buildIngestWorkspace(
   const root = graph.nodes[0];
   const firstSub = graph.nodes[1];
   const secondSub = graph.nodes[2];
-  const synthesis = graph.nodes[3];
 
   graph.edges = [
     createGraphEdge({ source: root.id, target: firstSub.id }, timestamp, 0),
@@ -886,7 +1001,116 @@ function buildIngestWorkspace(
             action: "ingest_seed",
             response_payload: {
               follow_up: "Expand branch detail from the right-side copilot.",
-              placeholder_synthesis_id: synthesis.id,
+              seeded_node_ids: graph.nodes.map((node) => node.id),
+            },
+          },
+        }),
+      ],
+    },
+  };
+}
+
+function appendIngestToWorkspace(
+  project: ProjectDetail,
+  workspace: WorkspacePayload,
+  input: IngestRequest,
+): WorkspacePayload {
+  if (!workspace.graph.metadata.validation.is_valid) {
+    throw new QonyApiError(
+      "The current workspace has validation issues. Repair it first or enable replace existing.",
+      409,
+    );
+  }
+
+  const root = workspace.graph.nodes.find((node) => node.rank === 1);
+  if (!root) {
+    throw new QonyApiError(
+      "The current workspace does not have a Rank 1 root. Repair it first or enable replace existing.",
+      409,
+    );
+  }
+
+  const text =
+    input.raw_text.trim() ||
+    "Uploaded material captured. Build the structured DAG from the extracted evidence.";
+  const focusSentence = text.split(/[.!?]/).find(Boolean)?.trim() ?? project.name;
+  const timestamp = nowIso();
+  const nextBranchIndex =
+    Math.max(
+      -1,
+      ...workspace.graph.nodes.map((node) => readBranchIndex(node.metadata.branch_index)),
+    ) + 1;
+  const appendedNodes = [
+    createGraphNode({
+      id: nextId("sub"),
+      rank: 2,
+      title: "Fresh source signal from ingest",
+      content: focusSentence,
+      source: "ingest",
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      branchIndex: nextBranchIndex,
+      offset: workspace.graph.nodes.length,
+    }),
+    createGraphNode({
+      id: nextId("sub"),
+      rank: 2,
+      title: "Follow-up investigation branch",
+      content:
+        "Preserve the current graph and use this branch to unpack the newly ingested material.",
+      source: "ingest",
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      branchIndex: nextBranchIndex + 1,
+      offset: workspace.graph.nodes.length + 1,
+    }),
+  ];
+  const appendedEdges = appendedNodes.map((node, index) =>
+    createGraphEdge(
+      { source: root.id, target: node.id },
+      timestamp,
+      workspace.graph.edges.length + index,
+    ),
+  );
+  const nextGraph: WorkspaceGraph = {
+    ...workspace.graph,
+    nodes: [...workspace.graph.nodes, ...appendedNodes],
+    edges: [...workspace.graph.edges, ...appendedEdges],
+    metadata: buildGraphMetadata(
+      workspace.project_id,
+      workspace.workspace_id,
+      [...workspace.graph.nodes, ...appendedNodes],
+      [...workspace.graph.edges, ...appendedEdges],
+      {
+        ...workspace.graph.metadata.attributes,
+        ingest_mode: "mock-parser",
+        last_ingest_mode: "append",
+        source_filename: input.source_filename ?? null,
+        provider_attempted: "mock-parser",
+        extracted_summary: focusSentence,
+      },
+      workspace.graph.metadata.version + 1,
+    ),
+  };
+
+  return {
+    ...workspace,
+    graph: nextGraph,
+    chat: {
+      messages: [
+        ...workspace.chat.messages,
+        createChatMessage({
+          role: "assistant",
+          content:
+            "Ingest completed without replacing the existing graph. I added two new Rank 2 branches under the current root so you can merge the new material into the active case.",
+          graphVersion: nextGraph.metadata.version,
+          appliedCommands: ["add_node", "add_edge"],
+          createdAt: timestamp,
+          metadata: {
+            provider: "mock-parser",
+            action: "ingest_append",
+            response_payload: {
+              appended_node_ids: appendedNodes.map((node) => node.id),
             },
           },
         }),
@@ -1003,8 +1227,7 @@ function buildAssistantPatch(
   }
 
   if (lowerMessage.includes("synthesis")) {
-    const rank5 = workspace.graph.nodes.find((node) => node.rank === 5) ?? null;
-    const parent = rank5 ?? workspace.graph.nodes.find((node) => node.rank === 4) ?? null;
+    const parent = workspace.graph.nodes.find((node) => node.rank === 5) ?? null;
     if (parent) {
       const newNodeId = nextId("synthesis");
       commands.push({
@@ -1145,6 +1368,12 @@ export async function mockCreateProject(
 ): Promise<ApiResponse<ProjectDetail>> {
   const timestamp = nowIso();
   const projectId = slugify(payload.name) || nextId("project");
+  if (mockDatabase.projects[projectId]) {
+    throw new QonyApiError(
+      `A project named "${payload.name}" already exists. Use a different name instead of overwriting the current case.`,
+      409,
+    );
+  }
   const workspaceId = `workspace-${projectId}`;
   const project: ProjectDetail = {
     id: projectId,
@@ -1212,12 +1441,20 @@ export async function mockIngestProject(
   payload: IngestRequest,
 ): Promise<ApiResponse<IngestPayload>> {
   const project = readProject(payload.project_id);
-  const workspace = buildIngestWorkspace(project, payload);
+  const currentWorkspace = readWorkspace(payload.project_id);
+  const shouldReplace =
+    payload.replace_existing === true || currentWorkspace.graph.nodes.length === 0;
+  const workspace = shouldReplace
+    ? buildIngestWorkspace(project, payload)
+    : appendIngestToWorkspace(project, currentWorkspace, payload);
   mockDatabase.workspaces[payload.project_id] = workspace;
   mockDatabase.projects[payload.project_id] = {
     ...project,
     updated_at: workspace.graph.metadata.updated_at,
-    status: "active",
+    status:
+      workspace.graph.metadata.validation.is_valid && project.status !== "archived"
+        ? "active"
+        : project.status,
   };
 
   return {
@@ -1248,6 +1485,8 @@ export async function mockGetWorkspace(
 export async function mockMutateWorkspace(
   payload: WorkspaceMutationRequest,
 ): Promise<ApiResponse<WorkspaceMutationResult>> {
+  const currentWorkspace = readWorkspace(payload.project_id);
+  assertExpectedVersion(currentWorkspace, payload.expected_version);
   const nextWorkspace = updateWorkspace(payload.project_id, (workspace) =>
     applyWorkspaceCommands(workspace, payload.commands),
   );
@@ -1270,6 +1509,7 @@ export async function mockChatWorkspace(
   payload: WorkspaceChatRequest,
 ): Promise<ApiResponse<WorkspaceChatResponse>> {
   const workspace = readWorkspace(payload.project_id);
+  assertExpectedVersion(workspace, payload.expected_version);
   const frameworkResponse = buildFrameworkAwareMockResponse(workspace, payload);
   const commands = frameworkResponse?.commands ?? buildAssistantPatch(workspace, payload);
   const updatedWorkspace = updateWorkspace(payload.project_id, (currentWorkspace) => {

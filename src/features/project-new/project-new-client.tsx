@@ -10,8 +10,13 @@ import { Input } from "@/src/components/ui/input";
 import { Panel, PanelHeader } from "@/src/components/ui/panel";
 import { Textarea } from "@/src/components/ui/textarea";
 import { browserApi } from "@/src/lib/api/client";
+import type { AuthSession } from "@/src/lib/auth/types";
 
-export function ProjectNewClient() {
+export function ProjectNewClient({
+  initialSession = null,
+}: {
+  initialSession?: AuthSession | null;
+}) {
   const router = useRouter();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -44,6 +49,7 @@ export function ProjectNewClient() {
     <AppShell
       description="Mulai case baru dengan nama dan detail singkat, lalu lanjutkan langsung ke ingest untuk memasukkan source material."
       eyebrow="New case"
+      initialSession={initialSession}
       title="Create project"
     >
       <div className="grid gap-6 lg:grid-cols-[1fr_0.92fr]">

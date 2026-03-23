@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 import { SiteFooter } from "@/src/components/layout/site-footer";
 import { SiteHeader } from "@/src/components/layout/site-header";
+import type { AuthSession } from "@/src/lib/auth/types";
 import { cn } from "@/src/lib/utils";
 
 export function AppShell({
@@ -11,6 +12,7 @@ export function AppShell({
   actions,
   children,
   hideHeroOnPrint = false,
+  initialSession = null,
 }: {
   eyebrow: string;
   title: string;
@@ -18,10 +20,11 @@ export function AppShell({
   actions?: ReactNode;
   children: ReactNode;
   hideHeroOnPrint?: boolean;
+  initialSession?: AuthSession | null;
 }) {
   return (
     <div className="page-shell min-h-screen">
-      <SiteHeader compact />
+      <SiteHeader compact initialSession={initialSession} />
       <main className="mx-auto flex min-h-screen max-w-7xl flex-col px-4 pb-16 pt-28 md:px-6">
         <header
           className={cn(

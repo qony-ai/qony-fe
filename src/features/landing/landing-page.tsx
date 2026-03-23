@@ -11,6 +11,7 @@ import {
 
 import { SiteFooter } from "@/src/components/layout/site-footer";
 import { SiteHeader } from "@/src/components/layout/site-header";
+import type { AuthSession } from "@/src/lib/auth/types";
 
 const featureCards = [
   {
@@ -50,10 +51,23 @@ const workflowCards = [
   },
 ];
 
-export function LandingPage() {
+export function getLandingDestinations(session: AuthSession | null) {
+  return {
+    primary: session ? "/dashboard" : "/register?next=%2Fdashboard",
+    secondary: session ? "/project/ingest" : "/login?next=%2Fproject%2Fingest",
+  };
+}
+
+export function LandingPage({
+  initialSession = null,
+}: {
+  initialSession?: AuthSession | null;
+}) {
+  const destinations = getLandingDestinations(initialSession);
+
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(121,248,154,0.12),transparent_20%),radial-gradient(circle_at_top_right,rgba(22,224,201,0.14),transparent_24%),linear-gradient(180deg,#063c2f_0%,#0d5e50_34%,#0b5b4d_66%,#084337_100%)]">
-      <SiteHeader />
+      <SiteHeader initialSession={initialSession} />
 
       <main>
         <section className="px-4 pb-20 pt-32 sm:px-6 lg:px-8">
@@ -76,13 +90,13 @@ export function LandingPage() {
               branch relationships, and export-ready synthesis.
             </p>
             <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-              <Link href="/dashboard">
+              <Link href={destinations.primary}>
                 <button className="flex items-center gap-2 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 px-8 py-4 text-lg font-semibold text-white shadow-lg shadow-emerald-500/30 transition hover:scale-105 hover:from-emerald-600 hover:to-teal-600">
                   Start Analyzing Now
                   <ArrowRight className="size-5" />
                 </button>
               </Link>
-              <Link href="/project/ingest">
+              <Link href={destinations.secondary}>
                 <button className="rounded-full border border-emerald-200/12 bg-[linear-gradient(180deg,rgba(84,146,121,0.24),rgba(21,75,58,0.32))] px-8 py-4 text-lg font-semibold text-white backdrop-blur-sm transition hover:bg-[linear-gradient(180deg,rgba(98,168,140,0.28),rgba(24,88,67,0.36))]">
                   Open Ingest Flow
                 </button>
@@ -207,7 +221,7 @@ export function LandingPage() {
                     </div>
                   ))}
                 </div>
-                <Link href="/dashboard">
+                <Link href={destinations.primary}>
                   <button className="mt-8 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 px-8 py-4 text-lg font-semibold text-white shadow-lg shadow-emerald-500/30 transition hover:scale-105 hover:from-emerald-600 hover:to-teal-600">
                     See Qony in Action
                   </button>

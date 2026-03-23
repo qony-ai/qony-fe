@@ -112,6 +112,10 @@ export function WorkspaceClient({ initialWorkspace }: WorkspaceClientProps) {
     [nodes],
   );
   const selectedNode = selectedNodeId ? nodeMap.get(selectedNodeId) ?? null : null;
+  const rootNodes = useMemo(
+    () => nodes.filter((node) => node.rank === 1),
+    [nodes],
+  );
   const rootNode = useMemo(
     () => nodes.find((node) => node.rank === 1) ?? nodes[0] ?? null,
     [nodes],
@@ -774,9 +778,9 @@ export function WorkspaceClient({ initialWorkspace }: WorkspaceClientProps) {
                 </button>
               </div>
             </div>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <div className="rounded-full border border-emerald-200/12 bg-emerald-300/8 px-3 py-1 text-xs text-white/62">
-                {nodes.length} nodes
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <div className="rounded-full border border-emerald-200/12 bg-emerald-300/8 px-3 py-1 text-xs text-white/62">
+                    {nodes.length} nodes
               </div>
               <div className="rounded-full border border-emerald-200/12 bg-emerald-300/8 px-3 py-1 text-xs text-white/62">
                 {edges.length} edges
@@ -813,6 +817,55 @@ export function WorkspaceClient({ initialWorkspace }: WorkspaceClientProps) {
           {sidebarTab === "diagram" ? (
             <div className="workspace-scroll min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-3 py-3 pr-4 overscroll-contain">
               <div className="grid gap-3">
+                <SidebarSection title="Validation">
+                  {validation.is_valid ? (
+                    <div className="rounded-2xl border border-emerald-300/18 bg-emerald-300/10 px-4 py-3 text-sm leading-6 text-emerald-50">
+                      The DAG is structurally valid. Complete branches can be exported once they reach Rank 6.
+                    </div>
+                  ) : (
+                    <div className="grid gap-3">
+                      <div className="rounded-2xl border border-lime-300/18 bg-lime-300/10 px-4 py-3 text-sm leading-6 text-lime-50">
+                        {validation.issues.length} validation issue(s) are blocking export. Fix the items below in the canvas before continuing.
+                      </div>
+
+                      {validation.issues.map((issue, index) => {
+                        const linkedNode = issue.node_id
+                          ? nodeMap.get(issue.node_id) ?? null
+                          : null;
+                        const canJumpToNode = Boolean(linkedNode);
+                        const isMultipleRootIssue = issue.code === "multiple_roots";
+
+                        return (
+                          <div
+                            className="rounded-2xl border border-emerald-200/10 bg-emerald-300/6 p-3"
+                            key={`${issue.code}-${issue.node_id ?? issue.edge_id ?? index}`}
+                          >
+                            <p className="text-sm font-semibold text-white">{issue.message}</p>
+                            <p className="mt-2 text-xs leading-5 text-white/58">
+                              {linkedNode
+                                ? `Linked node: ${linkedNode.title}`
+                                : isMultipleRootIssue
+                                  ? `Current roots: ${rootNodes.map((node) => truncate(node.title, 24)).join(" • ")}`
+                                  : issue.edge_id
+                                    ? `Edge reference: ${issue.edge_id}`
+                                    : "Review the graph and restore a single connected Rank 1 to Rank 6 structure."}
+                            </p>
+                            {canJumpToNode ? (
+                              <Button
+                                className="mt-3 w-full"
+                                onClick={() => handleSelectNode(linkedNode.id)}
+                                variant="secondary"
+                              >
+                                Inspect linked node
+                              </Button>
+                            ) : null}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </SidebarSection>
+
                 <SidebarSection title="Selection">
                   {selectedNode ? (
                     <div className="grid gap-3">

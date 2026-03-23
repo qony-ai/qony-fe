@@ -16,6 +16,10 @@ export function SiteHeader({
   const [session, setSession] = useState<AuthSession | null>(initialSession);
 
   useEffect(() => {
+    setSession(initialSession);
+  }, [initialSession]);
+
+  useEffect(() => {
     let isActive = true;
 
     async function loadSession() {

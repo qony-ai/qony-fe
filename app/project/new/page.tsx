@@ -4,6 +4,6 @@ import { ProjectNewClient } from "@/src/features/project-new/project-new-client"
 export const dynamic = "force-dynamic";
 
 export default async function ProjectNewPage() {
-  await requireAuthSession("/project/new");
-  return <ProjectNewClient />;
+  const session = await requireAuthSession("/project/new");
+  return <ProjectNewClient initialSession={session} />;
 }

@@ -9,12 +9,14 @@ import { Button } from "@/src/components/ui/button";
 import { Panel, PanelHeader } from "@/src/components/ui/panel";
 import { Textarea } from "@/src/components/ui/textarea";
 import { browserApi } from "@/src/lib/api/client";
+import type { AuthSession } from "@/src/lib/auth/types";
 import type { IngestPayload, ProjectSummary } from "@/src/lib/types/api";
 import { truncate } from "@/src/lib/utils";
 
 interface IngestClientProps {
   projects: ProjectSummary[];
   initialProjectId?: string;
+  initialSession?: AuthSession | null;
 }
 
 type IngestStage = "idle" | "uploading" | "parsing" | "complete";
@@ -22,6 +24,7 @@ type IngestStage = "idle" | "uploading" | "parsing" | "complete";
 export function IngestClient({
   projects,
   initialProjectId,
+  initialSession = null,
 }: IngestClientProps) {
   const [selectedProjectId, setSelectedProjectId] = useState(
     initialProjectId ?? projects[0]?.id ?? "",
@@ -42,12 +45,18 @@ export function IngestClient({
 
   const extractedPreview = result?.graph.nodes.slice(0, 4) ?? [];
 
+  async function advanceToParsingStage() {
+    await new Promise((resolve) => window.setTimeout(resolve, 180));
+    setStage("parsing");
+  }
+
   function handleSubmit() {
     setStage(selectedFile ? "uploading" : "parsing");
     startTransition(async () => {
       try {
         if (selectedFile) {
           setStage("uploading");
+          await advanceToParsingStage();
         }
 
         const response = selectedFile
@@ -91,6 +100,7 @@ export function IngestClient({
       }
       description="Upload source material, paste raw context, and seed the graph before you continue the case from the project detail page or canvas."
       eyebrow="Source ingest"
+      initialSession={initialSession}
       title="Ingest and extract context"
     >
       <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">

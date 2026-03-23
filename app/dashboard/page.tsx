@@ -5,7 +5,7 @@ import { serverApi } from "@/src/lib/api/server";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  await requireAuthSession("/dashboard");
+  const session = await requireAuthSession("/dashboard");
   const response = await serverApi.listProjects();
-  return <DashboardClient initialProjects={response.items} />;
+  return <DashboardClient initialProjects={response.items} initialSession={session} />;
 }

@@ -16,7 +16,7 @@ export default async function GraphExportPage({
   searchParams: Promise<{ autoprint?: string }>;
 }) {
   const [{ projectId }, { autoprint }] = await Promise.all([params, searchParams]);
-  await requireAuthSession(
+  const session = await requireAuthSession(
     autoprint === "1"
       ? `/export/graph/${projectId}?autoprint=1`
       : `/export/graph/${projectId}`,
@@ -43,6 +43,7 @@ export default async function GraphExportPage({
   return (
     <GraphExportView
       autoPrint={autoprint === "1"}
+      initialSession={session}
       project={project}
       workspace={workspace}
     />

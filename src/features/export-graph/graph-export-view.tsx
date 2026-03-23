@@ -8,6 +8,7 @@ import { AppShell } from "@/src/components/layout/app-shell";
 import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
 import { Panel, PanelHeader } from "@/src/components/ui/panel";
+import type { AuthSession } from "@/src/lib/auth/types";
 import type { ProjectDetail, WorkspacePayload } from "@/src/lib/types/api";
 import { truncate } from "@/src/lib/utils";
 import {
@@ -20,6 +21,7 @@ import { getRankDefinition, orderedRanks } from "@/src/lib/workspace/ranks";
 
 interface GraphExportViewProps {
   autoPrint: boolean;
+  initialSession?: AuthSession | null;
   project: ProjectDetail;
   workspace: WorkspacePayload;
 }
@@ -28,6 +30,7 @@ const boardPadding = 88;
 
 export function GraphExportView({
   autoPrint,
+  initialSession = null,
   project,
   workspace,
 }: GraphExportViewProps) {
@@ -139,6 +142,7 @@ export function GraphExportView({
       description="A print-ready graph board generated from the live workspace. Use the browser print dialog to save it as PDF."
       eyebrow="Graph export"
       hideHeroOnPrint
+      initialSession={initialSession}
       title={`${project.name} graph`}
     >
       <div className="print-sheet grid gap-6">

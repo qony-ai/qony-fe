@@ -18,7 +18,7 @@ export default async function ProjectDetailPage({
   params: Promise<{ projectId: string }>;
 }) {
   const { projectId } = await params;
-  await requireAuthSession(`/project/${projectId}`);
+  const session = await requireAuthSession(`/project/${projectId}`);
   let project: ProjectDetail;
   let workspace: WorkspacePayload;
   let preview: ExportPreviewPayload | null = null;
@@ -54,6 +54,7 @@ export default async function ProjectDetailPage({
     <ProjectDetailClient
       initialPreview={preview}
       initialProject={project}
+      initialSession={session}
       initialWorkspace={workspace}
     />
   );

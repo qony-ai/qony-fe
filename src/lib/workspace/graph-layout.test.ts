@@ -6,6 +6,7 @@ import {
   autoLayoutGraph,
   getColumnX,
   getHighlightedBranch,
+  snapNodePosition,
 } from "@/src/lib/workspace/graph-layout";
 
 function buildNode(
@@ -116,4 +117,16 @@ test("getHighlightedBranch returns connected ancestors and descendants", () => {
     ["framework", "hypothesis", "problem", "sub"],
   );
   assert.deepEqual([...highlighted.edgeIds].toSorted(), ["e1", "e2", "e3"]);
+});
+
+test("snapNodePosition keeps dragged nodes locked to their rank lane", () => {
+  const snapped = snapNodePosition(4, {
+    x: 913,
+    y: 137,
+  });
+
+  assert.deepEqual(snapped, {
+    x: getColumnX(4),
+    y: 144,
+  });
 });

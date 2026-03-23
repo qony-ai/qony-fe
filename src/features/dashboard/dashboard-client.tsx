@@ -18,16 +18,25 @@ import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { Panel, PanelHeader } from "@/src/components/ui/panel";
 import { browserApi } from "@/src/lib/api/client";
+import type { AuthSession } from "@/src/lib/auth/types";
 import type { ProjectSummary } from "@/src/lib/types/api";
 import { cn, formatDate, formatRelativeHours } from "@/src/lib/utils";
 
 interface DashboardClientProps {
   initialProjects: ProjectSummary[];
+  initialSession?: AuthSession | null;
 }
 
 type SortKey = "recent" | "name" | "status";
 
-export function DashboardClient({ initialProjects }: DashboardClientProps) {
+export function pickDashboardPrimaryProject(projects: ProjectSummary[]) {
+  return projects[0] ?? null;
+}
+
+export function DashboardClient({
+  initialProjects,
+  initialSession = null,
+}: DashboardClientProps) {
   const [projects, setProjects] = useState(initialProjects);
   const [query, setQuery] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("recent");
@@ -82,15 +91,24 @@ export function DashboardClient({ initialProjects }: DashboardClientProps) {
     ],
     [projects],
   );
-  const primaryProjectId = projects[0]?.id ?? null;
-  const primaryProjectName = projects[0]?.name ?? "latest case";
+  const primaryProject = pickDashboardPrimaryProject(filteredProjects);
+  const primaryProjectId = primaryProject?.id ?? null;
+  const primaryProjectName = primaryProject?.name ?? "visible case";
 
-  function handleDeleteProject(projectId: string) {
+  function handleDeleteProject(project: ProjectSummary) {
+    const shouldDelete = window.confirm(
+      `Delete "${project.name}"? This removes the project, workspace, and export state in mock mode.`,
+    );
+
+    if (!shouldDelete) {
+      return;
+    }
+
     startTransition(async () => {
       try {
-        await browserApi.deleteProject(projectId);
+        await browserApi.deleteProject(project.id);
         setProjects((current) =>
-          current.filter((project) => project.id !== projectId),
+          current.filter((currentProject) => currentProject.id !== project.id),
         );
         setError(null);
       } catch (requestError) {
@@ -115,6 +133,7 @@ export function DashboardClient({ initialProjects }: DashboardClientProps) {
       }
       description="Lihat semua project, buka detail project yang aktif, atau buat case baru lalu lanjutkan langsung ke ingest."
       eyebrow="Workspace hub"
+      initialSession={initialSession}
       title="Project dashboard"
     >
       <div className="grid gap-6">
@@ -167,7 +186,11 @@ export function DashboardClient({ initialProjects }: DashboardClientProps) {
               <QuickLink
                 href={primaryProjectId ? `/project/${primaryProjectId}` : "/dashboard"}
                 icon={Sparkles}
-                subtitle={`Review ${primaryProjectName} and choose the next action from one dedicated detail page.`}
+                subtitle={
+                  primaryProjectId
+                    ? `Review ${primaryProjectName} from the current filtered list and choose the next action from one dedicated detail page.`
+                    : "No visible project is selected yet. Clear filters or create a new case."
+                }
                 title="Open project detail"
               />
               <QuickLink
@@ -265,7 +288,7 @@ function ProjectCard({
 }: {
   project: ProjectSummary;
   disabled: boolean;
-  onDelete: (projectId: string) => void;
+  onDelete: (project: ProjectSummary) => void;
 }) {
   return (
     <article className="content-auto glass-panel rounded-[28px] border border-emerald-200/10 p-5">
@@ -320,7 +343,7 @@ function ProjectCard({
         <Button
           className="sm:col-span-2"
           disabled={disabled}
-          onClick={() => onDelete(project.id)}
+          onClick={() => onDelete(project)}
           variant="danger"
         >
           Delete project

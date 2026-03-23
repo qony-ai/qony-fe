@@ -24,10 +24,10 @@ import { Eye, Plus } from "lucide-react";
 import type { GraphNode, NodeRank, WorkspaceGraph } from "@/src/lib/types/api";
 import { cn, truncate } from "@/src/lib/utils";
 import {
-  clampCanvasPosition,
   getHighlightedBranch,
   getColumnX,
   graphSnapSize,
+  snapNodePosition,
 } from "@/src/lib/workspace/graph-layout";
 import { getNextRank, getRankDefinition, orderedRanks } from "@/src/lib/workspace/ranks";
 
@@ -183,7 +183,7 @@ export function WorkspaceGraph({
         onNodeDragStop={(_, node) => {
           onMoveNode(
             node.id,
-            clampCanvasPosition({
+            snapNodePosition((node.data as WorkspaceNodeData).rank, {
               x: node.position.x,
               y: node.position.y,
             }),

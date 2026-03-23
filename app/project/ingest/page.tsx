@@ -10,9 +10,15 @@ export default async function IngestPage({
   searchParams: Promise<{ projectId?: string }>;
 }) {
   const params = await searchParams;
-  await requireAuthSession(
+  const session = await requireAuthSession(
     params.projectId ? `/project/ingest?projectId=${params.projectId}` : "/project/ingest",
   );
   const response = await serverApi.listProjects();
-  return <IngestClient initialProjectId={params.projectId} projects={response.items} />;
+  return (
+    <IngestClient
+      initialProjectId={params.projectId}
+      initialSession={session}
+      projects={response.items}
+    />
+  );
 }

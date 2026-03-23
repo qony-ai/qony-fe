@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { useMemo, useState, useTransition } from "react";
 import {
+  AlertTriangle,
   ArrowUpRight,
   CheckCircle2,
   FileUp,
@@ -19,6 +20,7 @@ import { Input } from "@/src/components/ui/input";
 import { Panel, PanelHeader } from "@/src/components/ui/panel";
 import { Textarea } from "@/src/components/ui/textarea";
 import { browserApi } from "@/src/lib/api/client";
+import type { AuthSession } from "@/src/lib/auth/types";
 import type {
   ExportPreviewPayload,
   ProjectDetail,
@@ -31,12 +33,14 @@ import { getRankDefinition, orderedRanks } from "@/src/lib/workspace/ranks";
 interface ProjectDetailClientProps {
   initialPreview: ExportPreviewPayload | null;
   initialProject: ProjectDetail;
+  initialSession?: AuthSession | null;
   initialWorkspace: WorkspacePayload;
 }
 
 export function ProjectDetailClient({
   initialPreview,
   initialProject,
+  initialSession = null,
   initialWorkspace,
 }: ProjectDetailClientProps) {
   const [project, setProject] = useState(initialProject);
@@ -135,6 +139,7 @@ export function ProjectDetailClient({
         "Use this page to review case details, route into ingest, and continue the graph inside the canvas."
       }
       eyebrow="Project detail"
+      initialSession={initialSession}
       title={project.name}
     >
       <div className="grid gap-6">
@@ -343,10 +348,28 @@ export function ProjectDetailClient({
             />
 
             <div className="mt-6 grid gap-3">
-              <div className="rounded-[24px] border border-emerald-200/10 bg-emerald-300/6 p-4">
+              <div
+                className={cn(
+                  "rounded-[24px] border p-4",
+                  initialWorkspace.graph.metadata.validation.is_valid
+                    ? "border-emerald-200/10 bg-emerald-300/6"
+                    : "border-lime-300/18 bg-lime-300/10",
+                )}
+              >
                 <div className="flex items-center gap-3">
-                  <div className="flex size-10 items-center justify-center rounded-2xl border border-emerald-200/10 bg-emerald-300/6">
-                    <CheckCircle2 className="size-4 text-emerald-100" />
+                  <div
+                    className={cn(
+                      "flex size-10 items-center justify-center rounded-2xl border",
+                      initialWorkspace.graph.metadata.validation.is_valid
+                        ? "border-emerald-200/10 bg-emerald-300/6"
+                        : "border-lime-300/18 bg-lime-300/10",
+                    )}
+                  >
+                    {initialWorkspace.graph.metadata.validation.is_valid ? (
+                      <CheckCircle2 className="size-4 text-emerald-100" />
+                    ) : (
+                      <AlertTriangle className="size-4 text-lime-50" />
+                    )}
                   </div>
                   <div>
                     <p className="text-sm font-semibold text-white">Graph validation</p>

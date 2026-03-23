@@ -13,7 +13,7 @@ export default async function ExportPreviewPage({
   params: Promise<{ projectId: string }>;
 }) {
   const { projectId } = await params;
-  await requireAuthSession(`/export/preview/${projectId}`);
+  const session = await requireAuthSession(`/export/preview/${projectId}`);
   let preview;
 
   try {
@@ -28,5 +28,5 @@ export default async function ExportPreviewPage({
     throw error;
   }
 
-  return <ExportPreviewView preview={preview} />;
+  return <ExportPreviewView initialSession={session} preview={preview} />;
 }

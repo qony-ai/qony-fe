@@ -1,12 +1,16 @@
 import { AppShell } from "@/src/components/layout/app-shell";
 import { Badge } from "@/src/components/ui/badge";
 import { Panel, PanelHeader } from "@/src/components/ui/panel";
+import { getAuthSession } from "@/src/lib/auth/session";
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  const session = await getAuthSession();
+
   return (
     <AppShell
       description="Qony AI is built for structured problem-solving: ingest source material, map reasoning inside a six-rank DAG, and export decision-ready output."
       eyebrow="About Qony"
+      initialSession={session}
       title="A serious workspace for structured analysis"
     >
       <div className="grid gap-6">
