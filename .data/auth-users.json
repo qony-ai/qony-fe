@@ -1,0 +1,22 @@
+[
+  {
+    "id": "8d3fb354bcebd99699a34238349a4a27",
+    "username": "shandy",
+    "name": "Shandy",
+    "email": "shandy@qony.ai",
+    "password_hash": "bdf7dce15b4ff1ea5dbffba607711ed3330488dc8278ae8222fb3f6781ce3a5221f0c70de6175047cf06cdc52bf52f9cee00325c79c2affe48e874d3ff390fbc",
+    "password_salt": "9f5ee31c5ccdb20b2009032e7f1834ff",
+    "created_at": "2026-03-23T13:26:34.645Z",
+    "updated_at": "2026-03-23T13:26:34.645Z"
+  },
+  {
+    "id": "4fa8e7f7deff85cfb0465da474d84ef5",
+    "username": "qa.frontend.20260323",
+    "name": "Qa Frontend 20260323",
+    "email": "qa.frontend.20260323@qony.ai",
+    "password_hash": "a9c99dc50a1a199b02c4115a7ab5add5fe2490370fbaf1203c5a7ef6d5558a4a45c063196dfc4ca58c721b015e3d573413542aa091bef9d358aa6d827ef6b084",
+    "password_salt": "00cef02a5560fd6e63a16b52fe31db34",
+    "created_at": "2026-03-23T15:38:23.572Z",
+    "updated_at": "2026-03-23T15:38:23.572Z"
+  }
+]

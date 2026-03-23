@@ -31,6 +31,55 @@ export class QonyApiError extends Error {
   }
 }
 
+export async function executeApiRequest<T>(
+  baseUrl: string,
+  path: string,
+  init: RequestInit = {},
+): Promise<ApiResponse<T>> {
+  const isFormData = init.body instanceof FormData;
+  const response = await fetch(`${baseUrl}${path}`, {
+    ...init,
+    headers: {
+      ...(isFormData ? {} : { "Content-Type": "application/json" }),
+      ...(init.headers ?? {}),
+    },
+  });
+
+  const raw = (await response.text()) || "";
+  const payload = raw ? (JSON.parse(raw) as ApiResponse<T> | ApiErrorResponse) : null;
+
+  if (!response.ok) {
+    const errorPayload = payload as ApiErrorResponse | null;
+    throw new QonyApiError(
+      errorPayload?.error.message ?? `API request failed with status ${response.status}`,
+      response.status,
+      errorPayload ?? undefined,
+    );
+  }
+
+  return payload as ApiResponse<T>;
+}
+
+export async function parseApiRequestBody(init: RequestInit = {}) {
+  if (init.body instanceof FormData) {
+    return init.body;
+  }
+
+  if (typeof init.body === "string") {
+    return init.body.length > 0 ? JSON.parse(init.body) : undefined;
+  }
+
+  if (
+    init.body &&
+    typeof init.body === "object" &&
+    "getReader" in init.body === false
+  ) {
+    return init.body;
+  }
+
+  return undefined;
+}
+
 export function buildApiClient(fetcher: Fetcher) {
   return {
     async listProjects() {

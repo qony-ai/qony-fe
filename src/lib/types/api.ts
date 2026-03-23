@@ -117,6 +117,7 @@ export interface WorkspaceChatRequest {
   project_id: string;
   message: string;
   expected_version?: number | null;
+  selected_node_id?: string | null;
 }
 
 export interface WorkspaceChatResponse {

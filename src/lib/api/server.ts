@@ -1,38 +1,47 @@
-import { buildApiClient, QonyApiError } from "@/src/lib/api/core";
-import type { ApiErrorResponse, ApiResponse } from "@/src/lib/types/api";
+import "server-only";
 
-const serverBaseUrl =
-  process.env.QONY_API_BASE_URL ??
-  process.env.NEXT_PUBLIC_API_BASE_URL ??
-  "http://127.0.0.1:8000";
+import { cache } from "react";
+
+import { getAuthSession } from "@/src/lib/auth/session";
+import { buildApiClient } from "@/src/lib/api/core";
+import { requestQonyApi } from "@/src/lib/api/gateway";
+import type { ApiResponse } from "@/src/lib/types/api";
+
+const cachedServerGet = cache(async (path: string, actorKey: string) => {
+  const [email, name] = actorKey.split("::");
+  return requestQonyApi<unknown>(
+    path,
+    { method: "GET" },
+    undefined,
+    email && name
+      ? {
+          username: email.split("@")[0] || name.toLowerCase().replace(/\s+/g, "."),
+          email,
+          name,
+        }
+      : null,
+  );
+});
 
 async function serverFetch<T>(
   path: string,
   init: RequestInit = {},
 ): Promise<ApiResponse<T>> {
-  const isFormData = init.body instanceof FormData;
-  const response = await fetch(`${serverBaseUrl}${path}`, {
-    ...init,
-    cache: "no-store",
-    headers: {
-      ...(isFormData ? {} : { "Content-Type": "application/json" }),
-      ...(init.headers ?? {}),
-    },
-  });
+  const method = (init.method ?? "GET").toUpperCase();
+  const canUseCachedGet =
+    method === "GET" &&
+    !init.body &&
+    init.headers === undefined &&
+    init.signal === undefined &&
+    init.next === undefined;
+  const actor = await getAuthSession();
+  const actorKey = actor ? `${actor.email}::${actor.name}` : "";
 
-  const raw = (await response.text()) || "";
-  const payload = raw ? (JSON.parse(raw) as ApiResponse<T> | ApiErrorResponse) : null;
-
-  if (!response.ok) {
-    const errorPayload = payload as ApiErrorResponse | null;
-    throw new QonyApiError(
-      errorPayload?.error.message ?? `API request failed with status ${response.status}`,
-      response.status,
-      errorPayload ?? undefined,
-    );
+  if (canUseCachedGet) {
+    return (await cachedServerGet(path, actorKey)) as ApiResponse<T>;
   }
 
-  return payload as ApiResponse<T>;
+  return requestQonyApi<T>(path, init, undefined, actor);
 }
 
 export const serverApi = buildApiClient(serverFetch);
