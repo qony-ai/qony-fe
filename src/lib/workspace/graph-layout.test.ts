@@ -4,9 +4,9 @@ import assert from "node:assert/strict";
 import type { GraphEdge, GraphNode } from "@/src/lib/types/api";
 import {
   autoLayoutGraph,
+  clampCanvasPosition,
   getColumnX,
   getHighlightedBranch,
-  snapNodePosition,
 } from "@/src/lib/workspace/graph-layout";
 
 function buildNode(
@@ -119,14 +119,14 @@ test("getHighlightedBranch returns connected ancestors and descendants", () => {
   assert.deepEqual([...highlighted.edgeIds].toSorted(), ["e1", "e2", "e3"]);
 });
 
-test("snapNodePosition keeps dragged nodes locked to their rank lane", () => {
-  const snapped = snapNodePosition(4, {
+test("clampCanvasPosition preserves free horizontal movement while snapping to grid", () => {
+  const snapped = clampCanvasPosition({
     x: 913,
     y: 137,
   });
 
   assert.deepEqual(snapped, {
-    x: getColumnX(4),
+    x: 912,
     y: 144,
   });
 });

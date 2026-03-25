@@ -1,0 +1,46 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - navigation [ref=e3]:
+    - generic [ref=e4]:
+      - link "Q Qony AI Structured workspace" [ref=e5] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e6]: Q
+        - generic [ref=e7]:
+          - paragraph [ref=e8]: Qony AI
+          - paragraph [ref=e9]: Structured workspace
+      - generic [ref=e10]:
+        - link "Home" [ref=e11] [cursor=pointer]:
+          - /url: /
+        - link "Dashboard" [ref=e12] [cursor=pointer]:
+          - /url: /dashboard
+        - link "About" [ref=e13] [cursor=pointer]:
+          - /url: /about
+      - generic [ref=e15]:
+        - link "Register" [ref=e16] [cursor=pointer]:
+          - /url: /register
+          - button "Register" [ref=e17]
+        - link "Login" [ref=e18] [cursor=pointer]:
+          - /url: /login
+          - button "Login" [ref=e19]
+  - main [ref=e20]:
+    - generic [ref=e23]:
+      - paragraph [ref=e24]: Loading
+      - generic [ref=e25]:
+        - heading "Preparing the interface" [level=1] [ref=e26]
+        - paragraph [ref=e27]: Qony is fetching the latest route data and rebuilding the structured workspace view.
+    - paragraph [ref=e32]: Fetching the latest workspace data.
+  - contentinfo [ref=e33]:
+    - generic [ref=e34]:
+      - generic [ref=e35]:
+        - paragraph [ref=e36]: Qony AI
+        - paragraph [ref=e37]: A structured AI workspace for serious problem-solving, evidence-led analysis, and export-ready synthesis.
+      - generic [ref=e38]:
+        - link "Home" [ref=e39] [cursor=pointer]:
+          - /url: /
+        - link "Dashboard" [ref=e40] [cursor=pointer]:
+          - /url: /dashboard
+        - link "About" [ref=e41] [cursor=pointer]:
+          - /url: /about
+```

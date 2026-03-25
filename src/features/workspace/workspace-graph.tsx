@@ -24,10 +24,10 @@ import { Eye, Plus } from "lucide-react";
 import type { GraphNode, NodeRank, WorkspaceGraph } from "@/src/lib/types/api";
 import { cn, truncate } from "@/src/lib/utils";
 import {
+  clampCanvasPosition,
   getHighlightedBranch,
   getColumnX,
   graphSnapSize,
-  snapNodePosition,
 } from "@/src/lib/workspace/graph-layout";
 import { getNextRank, getRankDefinition, orderedRanks } from "@/src/lib/workspace/ranks";
 
@@ -132,7 +132,7 @@ export function WorkspaceGraph({
             Adjacent-rank connections only
           </div>
           <div className="pointer-events-auto rounded-full border border-emerald-200/12 bg-[#0a3f31]/90 px-4 py-2 text-xs font-medium text-white/78 shadow-[0_12px_30px_rgba(0,0,0,0.22)] backdrop-blur-xl">
-            Drag to reorder inside each lane
+            Drag nodes freely across the canvas
           </div>
         </div>
         <div className="pointer-events-auto rounded-full border border-emerald-300/18 bg-emerald-300/10 px-4 py-2 text-xs font-medium text-emerald-50 shadow-[0_12px_30px_rgba(0,0,0,0.22)] backdrop-blur-xl">
@@ -183,7 +183,7 @@ export function WorkspaceGraph({
         onNodeDragStop={(_, node) => {
           onMoveNode(
             node.id,
-            snapNodePosition((node.data as WorkspaceNodeData).rank, {
+            clampCanvasPosition({
               x: node.position.x,
               y: node.position.y,
             }),
