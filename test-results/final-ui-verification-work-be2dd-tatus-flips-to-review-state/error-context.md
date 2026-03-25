@@ -1,0 +1,144 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e7] [cursor=pointer]:
+    - img [ref=e8]
+  - alert [ref=e11]
+  - generic [ref=e12]:
+    - navigation [ref=e13]:
+      - generic [ref=e14]:
+        - link "Q Qony AI Structured workspace" [ref=e15] [cursor=pointer]:
+          - /url: /
+          - generic [ref=e16]: Q
+          - generic [ref=e17]:
+            - paragraph [ref=e18]: Qony AI
+            - paragraph [ref=e19]: Structured workspace
+        - generic [ref=e20]:
+          - link "Home" [ref=e21] [cursor=pointer]:
+            - /url: /
+          - link "Dashboard" [ref=e22] [cursor=pointer]:
+            - /url: /dashboard
+          - link "About" [ref=e23] [cursor=pointer]:
+            - /url: /about
+        - button "B1 Bv 1774294143680 @bv_1774294143680" [ref=e26] [cursor=pointer]:
+          - generic [ref=e27]: B1
+          - generic [ref=e28]:
+            - generic [ref=e29]: Bv 1774294143680
+            - generic [ref=e30]: "@bv_1774294143680"
+    - main [ref=e31]:
+      - generic [ref=e33]:
+        - generic [ref=e34]:
+          - paragraph [ref=e35]: Source ingest
+          - generic [ref=e36]:
+            - heading "Ingest and extract context" [level=1] [ref=e37]
+            - paragraph [ref=e38]: Upload source material, paste raw context, and seed the graph before you continue the case from the project detail page or canvas.
+        - generic [ref=e39]:
+          - link "Back to project" [ref=e40] [cursor=pointer]:
+            - /url: /project/browser-validation-1774294146326
+            - button "Back to project" [ref=e41]
+          - link "Open canvas" [ref=e42] [cursor=pointer]:
+            - /url: /workspace/browser-validation-1774294146326
+            - button "Open canvas" [ref=e43]
+      - generic [ref=e45]:
+        - generic [ref=e47]:
+          - generic [ref=e49]:
+            - paragraph [ref=e50]: Input
+            - generic [ref=e51]:
+              - heading "Seed a project from source material" [level=2] [ref=e52]
+              - paragraph [ref=e53]: Choose the target case, then upload supporting material or paste raw context.
+          - generic [ref=e54]:
+            - generic [ref=e55]:
+              - generic [ref=e56]: Target project
+              - combobox "Target project" [ref=e57]:
+                - option "Browser Validation 1774294146326" [selected]
+                - option "Retail Revenue Compression"
+                - option "B2B Market Entry Thesis"
+                - option "Blank Strategic Case"
+            - generic [ref=e59]:
+              - img [ref=e61]
+              - heading "Drag and drop a PDF" [level=2] [ref=e64]
+              - paragraph [ref=e65]: Qony will parse the document into a first-pass graph structure. You can also combine a file upload with manual context below.
+              - generic [ref=e66] [cursor=pointer]:
+                - img [ref=e67]
+                - text: Choose file
+            - generic [ref=e70]:
+              - generic [ref=e71]: Manual context
+              - textbox "Manual context" [ref=e72]:
+                - /placeholder: Paste the case brief, working notes, or extracted text from your source material.
+                - text: Validation root. This plain text ingest creates a small valid workspace before we intentionally break it in the browser.
+            - generic [ref=e73]:
+              - checkbox "Replace the current workspace graph for this project" [ref=e74]
+              - text: Replace the current workspace graph for this project
+            - generic [ref=e75]:
+              - button "Run ingest" [ref=e76] [cursor=pointer]
+              - link "Skip to workspace" [ref=e77] [cursor=pointer]:
+                - /url: /workspace/browser-validation-1774294146326
+                - button "Skip to workspace" [ref=e78]
+        - generic [ref=e79]:
+          - generic [ref=e80]:
+            - generic [ref=e82]:
+              - paragraph [ref=e83]: Progress
+              - generic [ref=e84]:
+                - heading "Ingest pipeline status" [level=2] [ref=e85]
+                - paragraph [ref=e86]: Users should always know whether Qony is uploading, parsing, or ready for inspection.
+            - generic [ref=e87]:
+              - generic [ref=e88]:
+                - img [ref=e90]
+                - generic [ref=e93]:
+                  - paragraph [ref=e94]: Upload source material
+                  - paragraph [ref=e95]: Complete
+              - generic [ref=e96]:
+                - img [ref=e98]
+                - generic [ref=e101]:
+                  - paragraph [ref=e102]: Extract structure and generate graph
+                  - paragraph [ref=e103]: Complete
+              - generic [ref=e104]:
+                - img [ref=e106]
+                - generic [ref=e109]:
+                  - paragraph [ref=e110]: Preview extracted context
+                  - paragraph [ref=e111]: Complete
+          - generic [ref=e112]:
+            - generic [ref=e114]:
+              - paragraph [ref=e115]: Preview
+              - generic [ref=e116]:
+                - heading "Extracted context snapshot" [level=2] [ref=e117]
+                - paragraph [ref=e118]: The right pane previews the first extracted structure before you continue into graph editing.
+            - generic [ref=e119]:
+              - generic [ref=e120]:
+                - paragraph [ref=e121]: Target project
+                - paragraph [ref=e122]: Browser Validation 1774294146326
+                - paragraph [ref=e123]: Workspace validation surfacing verification project.
+              - generic [ref=e124]: "Ingest complete: 3 nodes, 2 edges."
+              - generic [ref=e125]:
+                - paragraph [ref=e126]: Rank 1
+                - paragraph [ref=e127]: Validation root
+                - paragraph [ref=e128]: Validation root. This plain text ingest creates a small valid workspace before we intentionally break it in the browser.
+              - generic [ref=e129]:
+                - paragraph [ref=e130]: Rank 2
+                - paragraph [ref=e131]: Core demand-side drivers
+                - paragraph [ref=e132]: Capture the demand-side dynamics surfaced by the source material.
+              - generic [ref=e133]:
+                - paragraph [ref=e134]: Rank 2
+                - paragraph [ref=e135]: Operating model and capability gaps
+                - paragraph [ref=e136]: Trace the internal execution issues implied by the source material.
+              - generic [ref=e137]:
+                - link "Back to project" [ref=e138] [cursor=pointer]:
+                  - /url: /project/browser-validation-1774294146326
+                  - button "Back to project" [ref=e139]
+                - link "Open canvas" [ref=e140] [cursor=pointer]:
+                  - /url: /workspace/browser-validation-1774294146326
+                  - button "Open canvas" [ref=e141]
+    - contentinfo [ref=e142]:
+      - generic [ref=e143]:
+        - generic [ref=e144]:
+          - paragraph [ref=e145]: Qony AI
+          - paragraph [ref=e146]: A structured AI workspace for serious problem-solving, evidence-led analysis, and export-ready synthesis.
+        - generic [ref=e147]:
+          - link "Home" [ref=e148] [cursor=pointer]:
+            - /url: /
+          - link "Dashboard" [ref=e149] [cursor=pointer]:
+            - /url: /dashboard
+          - link "About" [ref=e150] [cursor=pointer]:
+            - /url: /about
+```
