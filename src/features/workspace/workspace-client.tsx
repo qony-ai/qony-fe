@@ -853,7 +853,11 @@ export function WorkspaceClient({ initialWorkspace }: WorkspaceClientProps) {
                             {canJumpToNode ? (
                               <Button
                                 className="mt-3 w-full"
-                                onClick={() => handleSelectNode(linkedNode.id)}
+                                onClick={() => {
+                                  if (linkedNode) {
+                                    handleSelectNode(linkedNode.id);
+                                  }
+                                }}
                                 variant="secondary"
                               >
                                 Inspect linked node

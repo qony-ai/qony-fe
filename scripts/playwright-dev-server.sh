@@ -15,4 +15,15 @@ fi
 ln -sfn "$ROOT_DIR/node_modules" "$TMP_DIR/node_modules"
 
 cd "$TMP_DIR"
-QONY_API_MODE=mock NEXT_PUBLIC_QONY_API_MODE=mock npm run dev -- --hostname 127.0.0.1 --port 3010 --webpack
+QONY_API_MODE=mock \
+NEXT_PUBLIC_QONY_API_MODE=mock \
+QONY_BILLING_PROVIDER=mock \
+QONY_APP_URL=http://127.0.0.1:3010 \
+NEXT_PUBLIC_APP_URL=http://127.0.0.1:3010 \
+QONY_TRUSTED_ORIGINS=http://127.0.0.1:3010 \
+QONY_AUTH_DATABASE_URL= \
+QONY_AUTH_SECRET=playwright-qony-secret-with-32-char-minimum \
+QONY_AUTH_AUTO_MIGRATE=false \
+QONY_GOOGLE_CLIENT_ID=playwright-google-client \
+QONY_GOOGLE_CLIENT_SECRET=playwright-google-secret \
+npm run dev -- --hostname 127.0.0.1 --port 3010 --webpack

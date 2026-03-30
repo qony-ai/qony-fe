@@ -2,16 +2,27 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LogOut, Menu, UserCircle2, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import {
+  ArrowRight,
+  CreditCard,
+  LogOut,
+  Menu,
+  Sparkles,
+  UserCircle2,
+  X,
+} from "lucide-react";
+import { useEffect, useRef, useState, useTransition } from "react";
 
 import { Button } from "@/src/components/ui/button";
+import { authClient } from "@/src/lib/auth/client";
+import { mapRawAuthSession, type RawAuthSession } from "@/src/lib/auth/shared";
 import type { AuthSession } from "@/src/lib/auth/types";
 import { cn } from "@/src/lib/utils";
 
 const navItems = [
   { href: "/", label: "Home" },
-  { href: "/dashboard", label: "Dashboard" },
+  { href: "/dashboard", label: "Workspace" },
+  { href: "/pricing", label: "Pricing" },
   { href: "/about", label: "About" },
 ];
 
@@ -25,8 +36,13 @@ function isActive(pathname: string, href: string) {
       pathname === "/dashboard" ||
       pathname.startsWith("/project") ||
       pathname.startsWith("/export") ||
-      pathname.startsWith("/profile")
+      pathname.startsWith("/profile") ||
+      pathname.startsWith("/workspace")
     );
+  }
+
+  if (href === "/pricing") {
+    return pathname.startsWith("/pricing") || pathname.startsWith("/billing");
   }
 
   return pathname === href;
@@ -41,24 +57,50 @@ function initialsFromName(name: string) {
     .join("");
 }
 
+function resolveSession(
+  initialSession: AuthSession | null,
+  liveSession: RawAuthSession | null | undefined,
+  hasHydrated: boolean,
+  isPending: boolean,
+) {
+  if (!hasHydrated || isPending || liveSession === undefined) {
+    return initialSession;
+  }
+
+  return liveSession ? mapRawAuthSession(liveSession) : null;
+}
+
 export function SiteHeaderClient({
   compact = false,
-  session,
+  initialSession,
 }: {
   compact?: boolean;
-  session: AuthSession | null;
+  initialSession?: AuthSession | null;
 }) {
   const pathname = usePathname();
   const router = useRouter();
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [hasHydrated, setHasHydrated] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const { data: liveSession, isPending: isSessionPending } =
+    authClient.useSession();
 
-  const initials = useMemo(
-    () => (session ? initialsFromName(session.name) : ""),
-    [session],
+  useEffect(() => {
+    setHasHydrated(true);
+  }, []);
+
+  const session = resolveSession(
+    initialSession ?? null,
+    liveSession as RawAuthSession | null | undefined,
+    hasHydrated,
+    isSessionPending,
   );
+  const initials = session ? initialsFromName(session.name) : "";
+  const isPro = session?.plan === "pro";
+  const pricingHref = session ? "/pricing?checkout=pro" : "/pricing";
 
   useEffect(() => {
     if (!menuOpen) {
@@ -91,14 +133,24 @@ export function SiteHeaderClient({
   }, [menuOpen]);
 
   function handleLogout() {
+    setAuthError(null);
+
     startTransition(async () => {
-      await fetch("/api/auth/logout", {
-        method: "POST",
-      });
-      setMenuOpen(false);
-      setMobileOpen(false);
-      router.push("/login");
-      router.refresh();
+      try {
+        const response = await authClient.signOut();
+        if (response.error) {
+          throw new Error(response.error.message || "Sign out failed.");
+        }
+
+        setMenuOpen(false);
+        setMobileOpen(false);
+        router.push("/login");
+        router.refresh();
+      } catch (error) {
+        setAuthError(
+          error instanceof Error ? error.message : "Sign out failed.",
+        );
+      }
     });
   }
 
@@ -148,67 +200,121 @@ export function SiteHeaderClient({
 
         <div className="flex items-center gap-2">
           {session ? (
-            <div className="relative hidden md:block" ref={menuRef}>
-              <button
-                aria-expanded={menuOpen}
-                aria-haspopup="menu"
-                className="inline-flex items-center gap-3 rounded-full border border-emerald-200/12 bg-emerald-300/8 px-3 py-2 text-left text-sm text-white transition hover:bg-emerald-300/12"
-                onClick={() => setMenuOpen((current) => !current)}
-                type="button"
-              >
-                <span className="flex size-8 items-center justify-center rounded-full bg-[linear-gradient(135deg,var(--accent-strong),var(--accent))] text-xs font-bold text-[#06261d]">
-                  {initials}
-                </span>
-                <span className="flex flex-col leading-tight">
-                  <span className="font-semibold">{session.name}</span>
-                  <span className="text-xs text-emerald-50/56">@{session.username}</span>
-                </span>
-              </button>
-
-              {menuOpen ? (
-                <div className="absolute right-0 top-[calc(100%+10px)] w-64 rounded-[24px] border border-emerald-200/10 bg-[linear-gradient(180deg,rgba(8,30,20,0.96),rgba(7,24,18,0.96))] p-2 shadow-[0_24px_60px_rgba(0,0,0,0.32)] backdrop-blur-2xl">
-                  <div className="rounded-[18px] border border-emerald-200/10 bg-emerald-300/8 px-3 py-3">
-                    <p className="text-sm font-semibold text-white">{session.name}</p>
-                    <p className="mt-1 text-xs text-emerald-50/56">@{session.username}</p>
-                  </div>
-                  <div className="mt-2 grid gap-1">
-                    <Link
-                      className="rounded-2xl px-3 py-3 text-sm font-semibold text-white/78 transition hover:bg-emerald-300/10 hover:text-white"
-                      href="/profile"
-                      onClick={() => setMenuOpen(false)}
-                    >
-                      Profile
-                    </Link>
-                    <Link
-                      className="rounded-2xl px-3 py-3 text-sm font-semibold text-white/78 transition hover:bg-emerald-300/10 hover:text-white"
-                      href="/dashboard"
-                      onClick={() => setMenuOpen(false)}
-                    >
-                      Dashboard
-                    </Link>
-                    <button
-                      className="inline-flex items-center gap-2 rounded-2xl px-3 py-3 text-sm font-semibold text-white/78 transition hover:bg-emerald-300/10 hover:text-white"
-                      disabled={isPending}
-                      onClick={handleLogout}
-                      type="button"
-                    >
-                      <LogOut className="size-4" />
-                      Logout
-                    </button>
-                  </div>
+            <>
+              {!isPro ? (
+                <Link className="hidden md:block" href={pricingHref}>
+                  <Button variant="secondary">
+                    <Sparkles className="size-4" />
+                    Upgrade
+                  </Button>
+                </Link>
+              ) : (
+                <div className="hidden rounded-full border border-emerald-200/12 bg-emerald-300/8 px-3 py-2 md:block">
+                  <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-emerald-50/52">
+                    Current plan
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-white">
+                    Qony Pro
+                  </p>
                 </div>
-              ) : null}
-            </div>
+              )}
+
+              <div className="relative hidden md:block" ref={menuRef}>
+                <button
+                  aria-expanded={menuOpen}
+                  aria-haspopup="menu"
+                  className="inline-flex items-center gap-3 rounded-full border border-emerald-200/12 bg-emerald-300/8 px-3 py-2 text-left text-sm text-white transition hover:bg-emerald-300/12"
+                  onClick={() => setMenuOpen((current) => !current)}
+                  type="button"
+                >
+                  <span className="flex size-8 items-center justify-center rounded-full bg-[linear-gradient(135deg,var(--accent-strong),var(--accent))] text-xs font-bold text-[#06261d]">
+                    {initials}
+                  </span>
+                  <span className="flex flex-col leading-tight">
+                    <span className="font-semibold">{session.name}</span>
+                    <span className="text-xs text-emerald-50/56">
+                      @{session.username}
+                    </span>
+                  </span>
+                </button>
+
+                {menuOpen ? (
+                  <div className="absolute right-0 top-[calc(100%+10px)] w-72 rounded-[24px] border border-emerald-200/10 bg-[linear-gradient(180deg,rgba(8,30,20,0.96),rgba(7,24,18,0.96))] p-2 shadow-[0_24px_60px_rgba(0,0,0,0.32)] backdrop-blur-2xl">
+                    <div className="rounded-[18px] border border-emerald-200/10 bg-emerald-300/8 px-3 py-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-white">
+                            {session.name}
+                          </p>
+                          <p className="mt-1 text-xs text-emerald-50/56">
+                            {session.email}
+                          </p>
+                        </div>
+                        <span className="rounded-full border border-emerald-200/12 bg-emerald-300/10 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.2em] text-emerald-50/70">
+                          {session.plan}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="mt-2 grid gap-1">
+                      <Link
+                        className="rounded-2xl px-3 py-3 text-sm font-semibold text-white/78 transition hover:bg-emerald-300/10 hover:text-white"
+                        href="/dashboard"
+                        onClick={() => setMenuOpen(false)}
+                      >
+                        Dashboard
+                      </Link>
+                      <Link
+                        className="rounded-2xl px-3 py-3 text-sm font-semibold text-white/78 transition hover:bg-emerald-300/10 hover:text-white"
+                        href="/billing"
+                        onClick={() => setMenuOpen(false)}
+                      >
+                        Billing
+                      </Link>
+                      <Link
+                        className="rounded-2xl px-3 py-3 text-sm font-semibold text-white/78 transition hover:bg-emerald-300/10 hover:text-white"
+                        href="/profile"
+                        onClick={() => setMenuOpen(false)}
+                      >
+                        Profile
+                      </Link>
+                      {!isPro ? (
+                        <Link
+                          className="rounded-2xl px-3 py-3 text-sm font-semibold text-white/78 transition hover:bg-emerald-300/10 hover:text-white"
+                          href={pricingHref}
+                          onClick={() => setMenuOpen(false)}
+                        >
+                          Upgrade to Pro
+                        </Link>
+                      ) : null}
+                      <button
+                        className="inline-flex items-center gap-2 rounded-2xl px-3 py-3 text-sm font-semibold text-white/78 transition hover:bg-emerald-300/10 hover:text-white"
+                        disabled={isPending}
+                        onClick={handleLogout}
+                        type="button"
+                      >
+                        <LogOut className="size-4" />
+                        Logout
+                      </button>
+                    </div>
+                    {authError ? (
+                      <p className="mt-2 rounded-2xl border border-rose-400/18 bg-rose-400/10 px-3 py-3 text-sm text-rose-100">
+                        {authError}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            </>
           ) : (
             <div className="hidden items-center gap-2 md:flex">
               <Link href="/register">
                 <Button className="px-5" variant="secondary">
-                  Register
+                  Create account
                 </Button>
               </Link>
               <Link href="/login">
                 <Button className="px-5" variant="primary">
-                  Login
+                  Sign in
                 </Button>
               </Link>
             </div>
@@ -250,15 +356,41 @@ export function SiteHeaderClient({
             {session ? (
               <>
                 <div className="rounded-2xl border border-emerald-200/10 bg-emerald-300/8 px-4 py-3">
-                  <p className="text-sm font-semibold text-white">{session.name}</p>
-                  <p className="mt-1 text-xs text-emerald-50/56">@{session.username}</p>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-white">
+                        {session.name}
+                      </p>
+                      <p className="mt-1 text-xs text-emerald-50/56">
+                        {session.email}
+                      </p>
+                    </div>
+                    <span className="rounded-full border border-emerald-200/12 bg-emerald-300/10 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.2em] text-emerald-50/70">
+                      {session.plan}
+                    </span>
+                  </div>
                 </div>
+                <Link href="/billing" onClick={() => setMobileOpen(false)}>
+                  <Button className="w-full" variant="secondary">
+                    <CreditCard className="size-4" />
+                    Billing
+                  </Button>
+                </Link>
                 <Link href="/profile" onClick={() => setMobileOpen(false)}>
                   <Button className="w-full" variant="secondary">
                     <UserCircle2 className="size-4" />
                     Profile
                   </Button>
                 </Link>
+                {!isPro ? (
+                  <Link href={pricingHref} onClick={() => setMobileOpen(false)}>
+                    <Button className="w-full">
+                      <Sparkles className="size-4" />
+                      Upgrade to Pro
+                      <ArrowRight className="size-4" />
+                    </Button>
+                  </Link>
+                ) : null}
                 <button
                   className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-emerald-200/12 bg-[linear-gradient(180deg,rgba(84,146,121,0.24),rgba(21,75,58,0.32))] px-5 py-2.5 text-sm font-semibold text-white"
                   disabled={isPending}
@@ -268,17 +400,22 @@ export function SiteHeaderClient({
                   <LogOut className="size-4" />
                   Logout
                 </button>
+                {authError ? (
+                  <p className="rounded-2xl border border-rose-400/18 bg-rose-400/10 px-4 py-3 text-sm text-rose-100">
+                    {authError}
+                  </p>
+                ) : null}
               </>
             ) : (
               <>
                 <Link href="/register" onClick={() => setMobileOpen(false)}>
                   <Button className="w-full" variant="secondary">
-                    Register
+                    Create account
                   </Button>
                 </Link>
                 <Link href="/login" onClick={() => setMobileOpen(false)}>
                   <Button className="w-full" variant="primary">
-                    Login
+                    Sign in
                   </Button>
                 </Link>
               </>

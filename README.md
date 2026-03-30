@@ -1,74 +1,105 @@
 # Qony AI Frontend
 
-Next.js App Router frontend for Qony AI, rebuilt as a structured problem-solving product rather than a generic CRUD shell. The app now includes:
+Next.js App Router frontend for Qony AI. The current frontend includes:
 
-- a public landing page at `/`
-- a global top navigation for every non-canvas route
-- a lightweight Next-side auth layer with protected app routes
-- a dedicated project detail route between dashboard and canvas
-- a premium React Flow workspace with rank-aware nodes, minimap, drag/pan/zoom, constrained edges, and auto-layout
-- an AI framework recommender that can insert or refresh Rank 4 analysis nodes from the active branch
-- a print-ready PDF export flow for both the graph board and the narrative preview
+- Better Auth-based email/password auth
+- Google OAuth entry points when provider env vars are configured
+- auth-aware navigation and protected app routes
+- a dedicated pricing page with Free and Pro plan presentation
+- Midtrans-oriented frontend billing flow with success, pending, failed, and canceled result states
+- the existing dashboard, ingest, workspace, and export product surfaces
 - a typed live/mock API adapter so the frontend remains usable without the backend
 
-## Routes
+## Key Routes
 
 - `/`
-  Marketing landing page aligned to the reference visual direction
-- `/dashboard`
-  Protected project hub with project creation, search, sorting, and case cards
+  Marketing landing page
 - `/login`
-  Public sign-in page for the frontend session
+  Better Auth sign-in page with email/password and OAuth buttons
+- `/register`
+  Better Auth sign-up page with email/password and OAuth buttons
+- `/pricing`
+  Public pricing page with auth-aware upgrade CTA behavior
+- `/billing`
+  Protected billing dashboard for current plan and subscription state
+- `/billing/success`
+  Protected success return state after checkout
+- `/billing/pending`
+  Protected pending return state after checkout
+- `/billing/failed`
+  Protected failed return state after checkout
+- `/billing/cancel`
+  Protected canceled return state after checkout
+- `/dashboard`
+  Protected project hub
 - `/profile`
-  Protected profile page surfaced from the header account menu
+  Protected account page
 - `/project/[projectId]`
-  Project detail view for metadata, workspace readiness, and routing into ingest/canvas/export
+  Project detail route
 - `/project/ingest`
-  File upload + raw text ingest flow with progress and extracted-node preview
+  File upload and raw text ingest flow
 - `/workspace/[projectId]`
-  Core DAG editor with graph canvas, project back button, manual edge creation, copilot patching, and graph PDF export
+  Core DAG editor
 - `/export/preview/[projectId]`
-  Deck-style report preview with active narrative content and PDF export
+  Deck-style report preview
 - `/export/graph/[projectId]`
-  Print-ready graph board for browser PDF export
+  Print-ready graph board
 - `/about`
-  Product and workflow overview
+  Product overview
 
-## Frontend Structure
+## Frontend Auth
 
-```text
-qony-fe/
-  app/
-    api/qony/[...segments]/
-    about/
-    dashboard/
-    export/graph/[projectId]/
-    export/preview/[projectId]/
-    project/[projectId]/
-    project/ingest/
-    workspace/[projectId]/
-  src/
-    components/
-      layout/
-      ui/
-    features/
-      dashboard/
-      export-graph/
-      export-preview/
-      ingest/
-      landing/
-      project-detail/
-      workspace/
-    lib/
-      api/
-      types/
-      utils.ts
-      workspace/
-```
+The frontend now uses Better Auth through `/api/auth/*`.
+
+- Server session reads use `auth.api.getSession(...)`
+- Browser auth actions use `createAuthClient(...)`
+- Protected routes still gate through `requireAuthSession(...)`
+- The header hydrates from the server session first, then upgrades to the live client session to avoid guest/auth flicker
+- Google OAuth is shown only when `QONY_GOOGLE_CLIENT_ID` and `QONY_GOOGLE_CLIENT_SECRET` are set
+
+### Local auth storage
+
+- If `QONY_AUTH_DATABASE_URL` is set, Better Auth uses Postgres
+- If `QONY_AUTH_DATABASE_URL` is missing, the frontend falls back to an in-memory adapter
+- `QONY_AUTH_AUTO_MIGRATE=true` runs Better Auth migrations on startup when Postgres is enabled
+
+## Billing and Midtrans Frontend Flow
+
+The pricing and billing UI is frontend-complete, but it assumes the backend already exposes billing endpoints.
+
+Frontend entry points:
+
+- `POST /api/billing/checkout`
+- `GET /api/billing/summary`
+- `GET /api/billing/status`
+
+Those internal routes forward to backend billing endpoints and normalize the response for the UI.
+
+Expected backend endpoints:
+
+- `GET /api/v1/billing/summary`
+- `POST /api/v1/billing/checkout`
+- `GET /api/v1/billing/status`
+
+### Billing provider modes
+
+- `QONY_BILLING_PROVIDER=midtrans`
+  Always use backend billing responses
+- `QONY_BILLING_PROVIDER=mock`
+  Keep pricing and billing flows local and deterministic without backend payment infrastructure
+- `QONY_BILLING_PROVIDER=auto`
+  Try the backend first and fall back to mock billing if the request fails
+
+### Midtrans frontend notes
+
+- The pricing page supports a Midtrans Snap-style frontend flow
+- The script is loaded only when a signed-in user can actually upgrade and `NEXT_PUBLIC_QONY_MIDTRANS_CLIENT_KEY` is present
+- Result states route into `/billing/success`, `/billing/pending`, `/billing/failed`, or `/billing/cancel`
+- In mock mode, checkout resolves locally into the success flow so the full frontend can be tested without a provider account
 
 ## API Modes
 
-The frontend exposes one internal API surface at `/api/qony/...`.
+The frontend exposes one internal proxy surface at `/api/qony/...`.
 
 - `auto`
   Try the real backend first, then fall back to the mock adapter if the request cannot connect
@@ -79,27 +110,74 @@ The frontend exposes one internal API surface at `/api/qony/...`.
 
 ## Environment
 
+Copy the template first:
+
 ```bash
 cp .env.example .env.local
 ```
 
-Available variables:
+Primary variables:
 
+- `QONY_APP_URL`
+  Canonical app URL used by Better Auth callback handling
+- `NEXT_PUBLIC_APP_URL`
+  Public app URL exposed to the browser
+- `QONY_TRUSTED_ORIGINS`
+  Comma-separated origins allowed by Better Auth
 - `QONY_API_BASE_URL`
-  Real backend base URL used by server-side requests
+  Backend base URL for server-side requests
 - `NEXT_PUBLIC_API_BASE_URL`
-  Real backend base URL used by client-side internal proxy requests
+  Backend base URL for browser-driven internal proxy requests
 - `QONY_API_MODE`
-  `auto`, `live`, or `mock` for server-side access
+  `auto`, `live`, or `mock` for server-side app data
 - `NEXT_PUBLIC_QONY_API_MODE`
-  `auto`, `live`, or `mock` for browser-side access
+  `auto`, `live`, or `mock` for browser-side app data
+- `QONY_AUTH_DATABASE_URL`
+  Optional Postgres connection string for Better Auth
 - `QONY_AUTH_SECRET`
-  Secret used to sign the frontend auth session cookie
+  Better Auth session secret
+- `QONY_AUTH_AUTO_MIGRATE`
+  Runs Better Auth migrations when using Postgres
+- `QONY_INTERNAL_ACTOR_SECRET`
+  Shared secret used to mint short-lived internal actor tokens for backend requests
+- `QONY_INTERNAL_ACTOR_ISSUER`
+  Issuer claim for internal actor tokens
+- `QONY_INTERNAL_ACTOR_AUDIENCE`
+  Audience claim for internal actor tokens
+- `QONY_GOOGLE_CLIENT_ID`
+  Enables Google OAuth button rendering and callback flow
+- `QONY_GOOGLE_CLIENT_SECRET`
+  Enables Google OAuth button rendering and callback flow
+- `QONY_BILLING_PROVIDER`
+  `auto`, `mock`, or `midtrans`
+- `NEXT_PUBLIC_QONY_BILLING_PROVIDER`
+  Optional browser-visible override for local billing-mode coordination
+- `QONY_MIDTRANS_SERVER_KEY`
+  Backend billing provider credential
+- `NEXT_PUBLIC_QONY_MIDTRANS_CLIENT_KEY`
+  Public Midtrans Snap client key used by the frontend script loader
+- `QONY_MIDTRANS_IS_PRODUCTION`
+  `true` for production Snap script URL, otherwise sandbox
 
-Recommended local setup:
+### Recommended local setups
 
-- backend available: keep both mode vars at `auto`
-- frontend-only work: set both mode vars to `mock`
+Frontend-only work:
+
+```bash
+QONY_API_MODE=mock
+NEXT_PUBLIC_QONY_API_MODE=mock
+QONY_BILLING_PROVIDER=mock
+```
+
+Real backend with local frontend:
+
+```bash
+QONY_API_MODE=auto
+NEXT_PUBLIC_QONY_API_MODE=auto
+QONY_BILLING_PROVIDER=auto
+```
+
+If you do not want to run Postgres locally for auth, leave `QONY_AUTH_DATABASE_URL` unset and the frontend will use the in-memory Better Auth adapter.
 
 ## Install and Run
 
@@ -108,9 +186,42 @@ npm install
 npm run dev
 ```
 
-The app runs at `http://localhost:3000`.
+The app runs at [http://localhost:3000](http://localhost:3000).
 
-## Validation
+## Verification
+
+### Sign in and sign up
+
+1. Open `/register`
+2. Create an account with name, email, and password
+3. Confirm you land on `/dashboard`
+4. Open `/login`
+5. Sign out, sign back in, and confirm the header switches to the authenticated state
+
+### Google OAuth
+
+1. Set `QONY_GOOGLE_CLIENT_ID` and `QONY_GOOGLE_CLIENT_SECRET`
+2. Open `/login` or `/register`
+3. Confirm the Google button is visible
+4. Click it and confirm the browser enters the Better Auth social callback flow
+
+### Pricing and upgrade flow
+
+1. Open `/pricing`
+2. Confirm Free and Pro plan cards render
+3. Confirm the comparison table and billing notes render
+4. As a guest, click the Pro CTA and confirm you are redirected into auth
+5. As an authenticated free user, click the Pro CTA and confirm checkout starts
+
+### Midtrans flow
+
+1. Set `QONY_BILLING_PROVIDER=midtrans` or `auto`
+2. Set `NEXT_PUBLIC_QONY_MIDTRANS_CLIENT_KEY`
+3. Confirm the pricing CTA opens Snap or redirects into the billing provider flow
+4. Confirm the return state lands on success, pending, failed, or canceled
+5. Open `/billing` and confirm the subscription summary matches the latest backend status
+
+## Automated Checks
 
 Lint:
 
@@ -124,10 +235,16 @@ Type-check:
 npx tsc --noEmit
 ```
 
-Tests:
+Unit tests:
 
 ```bash
 npm test
+```
+
+Browser verification:
+
+```bash
+npm run test:browser
 ```
 
 Production build:
@@ -136,42 +253,4 @@ Production build:
 npx next build --webpack
 ```
 
-`next build` in Turbopack mode can hit sandbox-specific CSS worker restrictions in constrained environments; webpack mode was verified successfully.
-
-## Product Flow
-
-- `/login` → sign in to create a session
-- `/dashboard` → review all projects
-- `/project/[projectId]` → inspect one project in detail
-- `/workspace/[projectId]` → edit the graph in the fullscreen canvas
-- `/export/preview/[projectId]` or `/export/graph/[projectId]` → export the case as PDF
-
-## Workspace Notes
-
-- The graph is intentionally constrained to the six Qony ranks.
-- The canvas route has no global top nav; it only exposes a back-to-project control in the upper-left corner.
-- Nodes can be dragged freely on the canvas with snap-to-grid behavior.
-- Edge creation is limited to adjacent ranks only.
-- Auto-layout uses Dagre to rebalance the canvas.
-- The right rail includes AI framework recommendations that map the active branch into Rank 4 framework nodes.
-- Graph PDF export opens a dedicated print-ready route and uses the browser print dialog for Save as PDF.
-- The mock API includes seeded projects so the full product flow can be exercised without the backend.
-
-## Frontend local setup checklist
-
-- Install dependencies:
-  `npm install`
-- Start the app:
-  `npm run dev`
-- Configure env vars:
-  copy `.env.example` to `.env.local`
-- Set the auth secret:
-  define `QONY_AUTH_SECRET` in `.env.local`
-- Use the mock API when the backend is unavailable:
-  set `QONY_API_MODE=mock` and `NEXT_PUBLIC_QONY_API_MODE=mock`
-- Test the workspace page:
-  log in first, open a real project from `/dashboard`, continue to `/project/[projectId]`, then open the canvas
-- Verify graph editor behavior:
-  drag a node, connect adjacent ranks, run `Auto-layout`, open graph PDF export, apply an AI framework to a Rank 3 branch, and submit a copilot patch
-- Run checks:
-  `npm run lint`, `npx tsc --noEmit`, `npm test`, `npx next build --webpack`
+`next build` in webpack mode is the verified production build path for this repository.

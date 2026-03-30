@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 
-import { getAuthSession } from "@/src/lib/auth/session";
+import { getAuthSessionFromHeaders } from "@/src/lib/auth/session";
 import { QonyApiError, parseApiRequestBody } from "@/src/lib/api/core";
 import { requestQonyApi } from "@/src/lib/api/gateway";
 
@@ -13,7 +13,7 @@ async function handleRequest(
   const { segments } = await params;
   const path = `/api/qony/${segments.join("/")}`;
   const method = request.method.toUpperCase();
-  const session = await getAuthSession();
+  const session = await getAuthSessionFromHeaders(request.headers);
 
   if (!session) {
     return NextResponse.json(

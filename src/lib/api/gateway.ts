@@ -14,6 +14,7 @@ import {
   type WorkspacePayload,
 } from "@/src/lib/types/api";
 import type { AuthSession } from "@/src/lib/auth/types";
+import { buildInternalActorToken } from "@/src/lib/auth/internal-actor";
 import { QonyApiError, executeApiRequest, parseApiRequestBody } from "@/src/lib/api/core";
 import {
   mockChatWorkspace,
@@ -79,12 +80,20 @@ async function liveRequest<T>(
     throw new QonyApiError("Authentication required.", 401);
   }
 
+  const internalActorToken = buildInternalActorToken(actor);
+
   return executeApiRequest<T>(backendBaseUrl(), resolveBackendPath(path), {
     ...init,
     headers: {
       ...(init.headers ?? {}),
-      "X-User-Email": normalizeActorEmail(actor),
-      "X-User-Name": actor.name,
+      ...(internalActorToken
+        ? {
+            Authorization: `Bearer ${internalActorToken}`,
+          }
+        : {
+            "X-User-Email": normalizeActorEmail(actor),
+            "X-User-Name": actor.name,
+          }),
     },
   });
 }
