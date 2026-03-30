@@ -4,15 +4,9 @@ import { AppShell } from "@/src/components/layout/app-shell";
 import { Badge } from "@/src/components/ui/badge";
 import { Panel, PanelHeader } from "@/src/components/ui/panel";
 import { RegisterForm } from "@/src/features/auth/register-form";
+import { normalizeNextPath } from "@/src/lib/auth/navigation";
+import { getConfiguredOAuthProviders } from "@/src/lib/auth/server";
 import { redirectIfAuthenticated } from "@/src/lib/auth/session";
-
-function normalizeNextPath(value?: string) {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) {
-    return "/dashboard";
-  }
-
-  return value;
-}
 
 export default async function RegisterPage({
   searchParams,
@@ -21,38 +15,39 @@ export default async function RegisterPage({
 }) {
   const { next } = await searchParams;
   const nextPath = normalizeNextPath(next);
+  const oauthProviders = getConfiguredOAuthProviders();
   await redirectIfAuthenticated(nextPath);
 
   return (
     <AppShell
-      description="Create a local account for the Qony frontend so dashboard, ingest, project detail, export, and canvas stay protected."
+      description="Create a Qony account to unlock protected workspace routes, billing-aware upgrades, and a session that maps cleanly into the backend actor contract."
       eyebrow="Authentication"
-      title="Register to Qony AI"
+      title="Create your Qony account"
     >
       <div className="grid gap-6 lg:grid-cols-[0.92fr_1.08fr]">
         <Panel className="rounded-[30px] p-5 md:p-6">
           <PanelHeader
-            description="Untuk demo saat ini, auth disimpan lokal di Next dan dipakai untuk meneruskan actor identity ke backend Python."
+            description="Start with Google OAuth or create an email/password account. New sessions land on the Free plan and can upgrade later without leaving the product flow."
             eyebrow="Create account"
-            title="Start with username and password"
+            title="Start with a secure product identity"
           />
           <div className="mt-6">
-            <RegisterForm nextPath={nextPath} />
+            <RegisterForm nextPath={nextPath} providers={oauthProviders} />
           </div>
         </Panel>
 
         <Panel className="rounded-[30px] p-5 md:p-6">
           <PanelHeader
-            description="Begitu akun dibuat, flow-nya langsung lanjut ke workspace app yang terlindungi."
-            eyebrow="After register"
+            description="Account creation drops you directly into the protected app shell so the rest of the product behaves like one coherent workspace."
+            eyebrow="After account creation"
             title="Protected product flow"
           />
           <div className="mt-6 grid gap-3">
             {[
-              "Dashboard semua project",
-              "Create project lalu lanjut ingest",
-              "Project detail dan fullscreen canvas",
-              "Export preview dan graph PDF",
+              "Project dashboard and workspace routes",
+              "Pricing and billing entry points tied to your plan",
+              "Project ingest, detail, and fullscreen canvas",
+              "Export preview and graph output under one session",
             ].map((item) => (
               <div
                 className="rounded-[24px] border border-emerald-200/10 bg-emerald-300/6 px-4 py-4"
@@ -64,9 +59,9 @@ export default async function RegisterPage({
             ))}
           </div>
           <p className="mt-5 text-sm text-white/60">
-            Sudah punya akun?{" "}
+            Already have an account?{" "}
             <Link className="font-semibold text-emerald-100 transition hover:text-white" href={`/login?next=${encodeURIComponent(nextPath)}`}>
-              Login di sini
+              Sign in here
             </Link>
           </p>
         </Panel>

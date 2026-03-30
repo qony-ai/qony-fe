@@ -1,16 +1,14 @@
+import Link from "next/link";
+
 import { redirectIfAuthenticated } from "@/src/lib/auth/session";
 import { LoginForm } from "@/src/features/auth/login-form";
 import { AppShell } from "@/src/components/layout/app-shell";
 import { Badge } from "@/src/components/ui/badge";
 import { Panel, PanelHeader } from "@/src/components/ui/panel";
-
-function normalizeNextPath(value?: string) {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) {
-    return "/dashboard";
-  }
-
-  return value;
-}
+import {
+  getConfiguredOAuthProviders,
+} from "@/src/lib/auth/server";
+import { normalizeNextPath } from "@/src/lib/auth/navigation";
 
 export default async function LoginPage({
   searchParams,
@@ -19,38 +17,39 @@ export default async function LoginPage({
 }) {
   const { next } = await searchParams;
   const nextPath = normalizeNextPath(next);
+  const oauthProviders = getConfiguredOAuthProviders();
   await redirectIfAuthenticated(nextPath);
 
   return (
     <AppShell
-      description="Sign in to access the Qony workspace, project dashboard, and structured canvas."
+      description="Sign in with email/password or OAuth to access the Qony workspace, pricing, billing, and structured project flow without session flicker."
       eyebrow="Authentication"
-      title="Login to Qony AI"
+      title="Sign in to Qony AI"
     >
       <div className="grid gap-6 lg:grid-cols-[0.92fr_1.08fr]">
         <Panel className="rounded-[30px] p-5 md:p-6">
           <PanelHeader
-            description="Auth saat ini ditangani di Next supaya route bisa diproteksi dan identity user bisa diteruskan ke backend Python."
+            description="Use your product account to unlock the protected workspace, billing area, and export flow. Google OAuth appears automatically when it is configured."
             eyebrow="Secure access"
-            title="Access the workspace"
+            title="Continue into the workspace"
           />
           <div className="mt-6">
-            <LoginForm nextPath={nextPath} />
+            <LoginForm nextPath={nextPath} providers={oauthProviders} />
           </div>
         </Panel>
 
         <Panel className="rounded-[30px] p-5 md:p-6">
           <PanelHeader
-            description="The product flow is locked behind login so dashboard, project detail, export, and canvas all stay in one authenticated workspace."
-            eyebrow="What you get"
-            title="After login"
+            description="Every protected surface runs inside one authenticated session, so navigation, upgrades, and backend actor identity stay consistent."
+            eyebrow="What opens up"
+            title="After sign in"
           />
           <div className="mt-6 grid gap-3">
             {[
-              "Dashboard for all projects",
-              "Project detail for one case",
-              "Fullscreen graph canvas",
-              "Narrative and graph PDF export",
+              "Project dashboard and protected detail routes",
+              "Auth-aware pricing and billing with upgrade flow",
+              "Fullscreen graph workspace without guest redirects",
+              "Export preview and graph output tied to one account",
             ].map((item) => (
               <div
                 className="rounded-[24px] border border-emerald-200/10 bg-emerald-300/6 px-4 py-4"
@@ -61,15 +60,22 @@ export default async function LoginPage({
               </div>
             ))}
           </div>
-          <p className="mt-5 text-sm text-white/60">
-            Belum punya akun?{" "}
-            <a
+          <div className="mt-5 flex flex-wrap items-center gap-3 text-sm text-white/60">
+            <span>New to Qony?</span>
+            <Link
               className="font-semibold text-emerald-100 transition hover:text-white"
               href={`/register?next=${encodeURIComponent(nextPath)}`}
             >
-              Register di sini
-            </a>
-          </p>
+              Create an account
+            </Link>
+            <span className="text-white/26">·</span>
+            <Link
+              className="font-semibold text-emerald-100 transition hover:text-white"
+              href="/pricing"
+            >
+              View plans
+            </Link>
+          </div>
         </Panel>
       </div>
     </AppShell>

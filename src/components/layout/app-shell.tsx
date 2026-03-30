@@ -24,7 +24,7 @@ export function AppShell({
 }) {
   return (
     <div className="page-shell min-h-screen">
-      <SiteHeader compact initialSession={initialSession} />
+      <SiteHeader compact initialSession={initialSession ?? null} />
       <main className="mx-auto flex min-h-screen max-w-7xl flex-col px-4 pb-16 pt-28 md:px-6">
         <header
           className={cn(
