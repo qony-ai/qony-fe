@@ -23,3 +23,4 @@ declare global {
     };
   }
 }
+// Note: The above code assumes that the Midtrans Snap.js library is loaded and available on the window object. The getMidtransSnapUrl function returns the appropriate URL for the Snap.js library based on whether the environment is production or sandbox. The isMidtransProduction function checks the environment variable to determine if it's in production mode.
