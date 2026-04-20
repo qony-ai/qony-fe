@@ -48,7 +48,6 @@ async function handleRequest(
               ? JSON.stringify(body)
               : undefined,
       },
-      undefined,
       session,
     );
 
@@ -97,6 +96,13 @@ export async function POST(
 }
 
 export async function PATCH(
+  request: NextRequest,
+  context: { params: Promise<{ segments: string[] }> },
+) {
+  return handleRequest(request, context);
+}
+
+export async function PUT(
   request: NextRequest,
   context: { params: Promise<{ segments: string[] }> },
 ) {

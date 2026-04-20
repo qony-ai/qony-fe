@@ -17,17 +17,17 @@ const featureCards = [
   {
     icon: Brain,
     title: "Structured Reasoning Engine",
-    body: "Turn raw material into a six-rank logic map instead of starting from a blank page.",
+    body: "Turn raw material into a typed business knowledge graph instead of starting from a blank page.",
   },
   {
     icon: Sparkles,
     title: "Smart Visualizer",
-    body: "Generate readable DAG branches, not messy freeform whiteboards.",
+    body: "Generate readable graph structure, not messy freeform whiteboards.",
   },
   {
     icon: ChartColumn,
     title: "Guided Analysis",
-    body: "Move from hypothesis to framework to evidence with visible branch discipline.",
+    body: "Move from uploaded documents to typed nodes, web context, and export-ready synthesis.",
   },
   {
     icon: TrendingUp,
@@ -38,8 +38,8 @@ const featureCards = [
 
 const workflowCards = [
   {
-    title: "Rank 1 to Rank 6 structure",
-    body: "Every branch follows the same ladder: problem, sub-problem, hypothesis, framework, evidence, synthesis.",
+    title: "Flat typed node system",
+    body: "Every node stays independent. Structure comes from node type and relation type, not from a forced rank ladder.",
   },
   {
     title: "AI copilot patches the graph",
@@ -47,7 +47,7 @@ const workflowCards = [
   },
   {
     title: "Canvas quality with constraints",
-    body: "The workspace behaves like a diagram tool, but it never lets logic collapse into chaos.",
+    body: "The editor behaves like a diagram tool, but it never lets logic collapse into chaos.",
   },
 ];
 
@@ -85,9 +85,9 @@ export function LandingPage({
               </span>
             </h1>
             <p className="mx-auto mb-10 max-w-3xl text-xl text-white/74">
-              Transform complex problems and case data into a structured six-rank
-              workspace. Qony AI turns unstructured inputs into readable logic,
-              branch relationships, and export-ready synthesis.
+              Transform complex problems and case data into a structured business
+              intelligence graph. Qony AI turns unstructured inputs into readable
+              nodes, context enrichment, and export-ready synthesis.
             </p>
             <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
               <Link href={destinations.primary}>
@@ -175,7 +175,7 @@ export function LandingPage({
                 What We Offer
               </h2>
               <p className="mx-auto max-w-2xl text-xl text-white/74">
-                Qony AI combines structured logic, workspace quality, and export-ready storytelling in one flow.
+                Qony AI combines structured logic, graph quality, and export-ready storytelling in one flow.
               </p>
             </div>
 
@@ -239,7 +239,7 @@ export function LandingPage({
                     Qony AI
                   </h3>
                   <p className="text-white/74">
-                    One structured workspace from ingest to export preview
+                    One typed graph flow from ingest to export
                   </p>
                 </div>
               </div>
@@ -259,9 +259,9 @@ export function LandingPage({
             </div>
             <div className="mb-12 grid gap-8 md:grid-cols-3">
               {[
-                ["01", "Ingest", "Upload PDFs or paste raw context"],
-                ["02", "Workspace", "Refine the six-rank DAG with copilot support"],
-                ["03", "Export", "Review deck-style narrative preview"],
+                ["01", "Ingest", "Upload PDF, DOCX, PPTX, or TXT business cases"],
+                ["02", "Editor", "Refine the typed graph with AI and manual node editing"],
+                ["03", "Export", "Generate PDF pitch decks or business documents"],
               ].map(([value, title, body]) => (
                 <div
                   className="rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/10 to-teal-500/10 p-8 text-center backdrop-blur-sm"
@@ -278,10 +278,10 @@ export function LandingPage({
             <div className="rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-emerald-500/20 to-teal-500/20 p-12 text-center backdrop-blur-sm">
               <h3 className="mb-4 text-3xl font-bold text-white">Built for serious AI productivity</h3>
               <p className="mb-4 bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-6xl font-bold text-transparent">
-                6-Rank DAG
+                Typed Graph
               </p>
               <p className="text-xl text-white/74">
-                Structured logic, premium workspace interaction, and cleaner export quality
+                Structured logic, web enrichment, and cleaner export quality
               </p>
             </div>
           </div>

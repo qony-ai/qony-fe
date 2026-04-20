@@ -54,7 +54,7 @@ export const metadata: Metadata = {
     template: "%s | Qony AI",
   },
   description:
-    "Qony AI is a structured six-rank reasoning workspace for ingesting source material, mapping logic, and exporting decision-ready narratives.",
+    "Qony AI ingests business case documents, enriches them with web context, builds typed knowledge graphs, and exports decision-ready PDFs.",
 };
 
 export const viewport: Viewport = {

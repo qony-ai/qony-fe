@@ -252,7 +252,7 @@ export function PricingPageClient({
                 Choose the plan that fits the maturity of your analysis workflow.
               </h2>
               <p className="mt-4 text-sm leading-7 text-white/66 md:text-base">
-                The Free plan gets you into the full structured workspace. Pro
+                The Free plan gets you into the full typed graph flow. Pro
                 adds a more polished billing posture, premium-ready output, and
                 the paid subscription path surfaced through Midtrans.
               </p>

@@ -171,14 +171,15 @@ export function normalizeBillingSummary(
         ? (raw.data as Record<string, unknown>)
         : (raw as Record<string, unknown>)
       : {};
-  const plan = normalizePlan(source.plan ?? source.currentPlan, session.plan);
+  const planValue = source.plan ?? source.plan_id ?? source.currentPlan;
+  const normalizedPlan = normalizePlan(planValue, session.plan);
   const subscriptionStatus = (
     readString(
       source,
       "subscriptionStatus",
       "subscription_status",
       "status",
-    ) || (plan === "pro" ? "active" : "inactive")
+    ) || (normalizedPlan === "pro" ? "active" : "inactive")
   ).toLowerCase() as BillingSubscriptionStatus;
 
   return {
@@ -194,11 +195,19 @@ export function normalizeBillingSummary(
       "next_billing_at",
       "renewsAt",
       "renews_at",
+      "current_period_end",
     ),
-    plan,
-    planLabel: plan === "pro" ? "Qony Pro" : "Qony Free",
+    plan: normalizedPlan,
+    planLabel: normalizedPlan === "pro" ? "Qony Pro" : "Qony Free",
     provider,
-    renewsAt: readString(source, "renewsAt", "renews_at", "nextBillingAt", "next_billing_at"),
+    renewsAt: readString(
+      source,
+      "renewsAt",
+      "renews_at",
+      "nextBillingAt",
+      "next_billing_at",
+      "current_period_end",
+    ),
     subscriptionStatus,
   };
 }
@@ -245,7 +254,7 @@ export function normalizePaymentStatus(
       fallback.paymentId ||
       fallback.orderId ||
       `qony-${fallback.plan}-${Date.now()}`,
-    plan: normalizePlan(source.plan, fallback.plan),
+    plan: normalizePlan(source.plan ?? source.plan_id, fallback.plan),
     provider: normalizeProvider(source.provider, fallback.provider || "midtrans"),
     providerStatus: readString(
       source,

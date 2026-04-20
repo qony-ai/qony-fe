@@ -1,0 +1,22 @@
+{
+  "components": [
+    {
+      "id": "problem-statement",
+      "label": "Problem Statement",
+      "path": "slides/problem-statement.html",
+      "export_type": "pitch_deck"
+    },
+    {
+      "id": "graph-summary",
+      "label": "Graph Summary",
+      "path": "slides/graph-summary.html",
+      "export_type": "pitch_deck"
+    },
+    {
+      "id": "business-section",
+      "label": "Business Section",
+      "path": "docs/business-section.html",
+      "export_type": "business_document"
+    }
+  ]
+}

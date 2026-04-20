@@ -81,7 +81,7 @@ export function DashboardClient({
         value: projects.filter((project) => project.status !== "archived").length,
       },
       {
-        label: "Active workspaces",
+        label: "Active graphs",
         value: projects.filter((project) => project.status === "active").length,
       },
       {
@@ -97,7 +97,7 @@ export function DashboardClient({
 
   function handleDeleteProject(project: ProjectSummary) {
     const shouldDelete = window.confirm(
-      `Delete "${project.name}"? This removes the project, workspace, and export state in mock mode.`,
+      `Delete "${project.name}"? This removes the project, graph, and export state.`,
     );
 
     if (!shouldDelete) {
@@ -131,8 +131,8 @@ export function DashboardClient({
           </Button>
         </Link>
       }
-      description="Lihat semua project, buka detail project yang aktif, atau buat case baru lalu lanjutkan langsung ke ingest."
-      eyebrow="Workspace hub"
+      description="Lihat semua project, upload business case, lalu lanjutkan ke editor typed-graph dan export."
+      eyebrow="Project hub"
       initialSession={initialSession}
       title="Project dashboard"
     >
@@ -178,26 +178,30 @@ export function DashboardClient({
 
           <Panel className="rounded-[30px] p-5 md:p-6">
             <PanelHeader
-              description="Use one stable flow for the live case: project detail first, then route into ingest, canvas, or export."
+              description="Flow aktif sekarang hanya memakai ingestion dan editor typed-graph sesuai PRD."
               eyebrow="Continue work"
               title="Open the current case"
             />
             <div className="mt-6 grid gap-3">
               <QuickLink
-                href={primaryProjectId ? `/project/${primaryProjectId}` : "/dashboard"}
+                href={
+                  primaryProjectId
+                    ? `/project/ingest?projectId=${primaryProjectId}`
+                    : "/project/ingest"
+                }
                 icon={Sparkles}
                 subtitle={
                   primaryProjectId
-                    ? `Review ${primaryProjectName} from the current filtered list and choose the next action from one dedicated detail page.`
+                    ? `Upload the next business case into ${primaryProjectName} before continuing to the editor.`
                     : "No visible project is selected yet. Clear filters or create a new case."
                 }
-                title="Open project detail"
+                title="Start ingestion"
               />
               <QuickLink
-                href={primaryProjectId ? `/workspace/${primaryProjectId}` : "/dashboard"}
+                href={primaryProjectId ? `/editor/${primaryProjectId}` : "/dashboard"}
                 icon={Workflow}
-                subtitle="Jump straight into the graph editor if the case is already framed."
-                title="Open canvas"
+                subtitle="Open the PRD editor if the graph already exists."
+                title="Open editor"
               />
               <QuickLink
                 href={
@@ -206,8 +210,8 @@ export function DashboardClient({
                     : "/project/ingest"
                 }
                 icon={FolderKanban}
-                subtitle="Upload or paste fresh material before you continue the analysis."
-                title="See ingest"
+                subtitle="Upload a PDF, DOCX, PPTX, or TXT file and stream progress over WebSocket."
+                title="Document ingestion"
               />
             </div>
           </Panel>
@@ -309,7 +313,7 @@ function ProjectCard({
             {project.name}
           </h3>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-white/56">
-            {project.description || "No description yet. Open the detail page to add one."}
+            {project.description || "No description yet."}
           </p>
         </div>
         <div className="rounded-[22px] border border-emerald-200/10 bg-emerald-300/6 px-4 py-3 text-right">
@@ -336,10 +340,10 @@ function ProjectCard({
       </div>
 
       <div className="mt-6 grid gap-3 sm:grid-cols-2">
-        <ProjectRouteLink href={`/project/${project.id}`} label="View detail" />
-        <ProjectRouteLink href={`/workspace/${project.id}`} label="Open canvas" />
+        <ProjectRouteLink href={`/editor/${project.id}`} label="Open editor" />
         <ProjectRouteLink href={`/project/ingest?projectId=${project.id}`} label="Ingest" />
-        <ProjectRouteLink href={`/export/preview/${project.id}`} label="Export" />
+        <ProjectRouteLink href="/pricing?checkout=pro" label="Upgrade" />
+        <ProjectRouteLink href="/billing" label="Billing" />
         <Button
           className="sm:col-span-2"
           disabled={disabled}

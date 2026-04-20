@@ -15,7 +15,6 @@ async function serverFetch<T>(
   return requestQonyApi<T>(
     path,
     method === "GET" ? { ...init, cache: "no-store" } : init,
-    undefined,
     actor,
   );
 }

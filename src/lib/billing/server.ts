@@ -17,6 +17,11 @@ import type {
   PaymentStatusSnapshot,
 } from "@/src/lib/billing/types";
 
+const PLAN_AMOUNT: Record<string, number> = {
+  free: 0,
+  pro: 299000,
+};
+
 function backendBaseUrl() {
   return (
     process.env.QONY_API_BASE_URL ??
@@ -111,7 +116,7 @@ export async function getBillingSummary(
   }
 
   try {
-    const response = await fetchBackend("/api/v1/billing/summary", session);
+    const response = await fetchBackend("/api/v1/payment/subscription", session);
     return normalizeBillingSummary(
       response,
       session,
@@ -147,13 +152,13 @@ export async function createBillingCheckout(
   }
 
   try {
-    const payload = await fetchBackend("/api/v1/billing/checkout", session, {
+    const payload = await fetchBackend("/api/v1/payment/checkout", session, {
       body: JSON.stringify({
-        cancel_url: `${process.env.QONY_APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? ""}/billing/cancel`,
-        pending_url: `${process.env.QONY_APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? ""}/billing/pending`,
-        plan: request.plan,
-        source: request.source ?? "pricing",
-        success_url: `${process.env.QONY_APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? ""}/billing/success`,
+        amount: PLAN_AMOUNT[request.plan] ?? PLAN_AMOUNT.pro,
+        currency: "IDR",
+        customer_email: session.email,
+        customer_name: session.name,
+        plan_id: request.plan,
       }),
       method: "POST",
     });
@@ -204,12 +209,8 @@ export async function getBillingPaymentStatus(
     return normalizePaymentStatus(null, fallback);
   }
 
-  const requestQuery = new URLSearchParams(searchParams);
   try {
-    const response = await fetchBackend(
-      `/api/v1/billing/status?${requestQuery.toString()}`,
-      session,
-    );
+    const response = await fetchBackend("/api/v1/payment/subscription", session);
     return normalizePaymentStatus(response, fallback);
   } catch (error) {
     if (mode === "auto") {

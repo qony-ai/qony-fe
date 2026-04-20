@@ -17,9 +17,9 @@ export const pricingPlans: PricingPlan[] = [
   {
     billing: "For individual analysts exploring structured case work",
     bullets: [
-      "Core six-rank workspace and project dashboard",
+      "Core typed-graph editor and project dashboard",
       "Standard ingest, graph editing, and protected routes",
-      "Basic export preview for one-account workflows",
+      "Basic export output for one-account workflows",
       "Pricing and billing visibility inside the app",
     ],
     code: "free",
@@ -52,7 +52,7 @@ export const pricingPlans: PricingPlan[] = [
 
 export const pricingComparison = [
   {
-    feature: "Protected workspace and dashboard",
+    feature: "Protected graph editor and dashboard",
     free: "Included",
     pro: "Included",
   },

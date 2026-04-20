@@ -15,8 +15,6 @@ fi
 ln -sfn "$ROOT_DIR/node_modules" "$TMP_DIR/node_modules"
 
 cd "$TMP_DIR"
-QONY_API_MODE=mock \
-NEXT_PUBLIC_QONY_API_MODE=mock \
 QONY_BILLING_PROVIDER=mock \
 QONY_APP_URL=http://127.0.0.1:3010 \
 NEXT_PUBLIC_APP_URL=http://127.0.0.1:3010 \

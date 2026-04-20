@@ -21,9 +21,9 @@ import { cn } from "@/src/lib/utils";
 
 const navItems = [
   { href: "/", label: "Home" },
-  { href: "/dashboard", label: "Workspace" },
+  { href: "/dashboard", label: "Dashboard" },
   { href: "/pricing", label: "Pricing" },
-  { href: "/about", label: "About" },
+  { href: "/admin", label: "Admin" },
 ];
 
 function isActive(pathname: string, href: string) {
@@ -35,14 +35,17 @@ function isActive(pathname: string, href: string) {
     return (
       pathname === "/dashboard" ||
       pathname.startsWith("/project") ||
-      pathname.startsWith("/export") ||
       pathname.startsWith("/profile") ||
-      pathname.startsWith("/workspace")
+      pathname.startsWith("/editor")
     );
   }
 
   if (href === "/pricing") {
     return pathname.startsWith("/pricing") || pathname.startsWith("/billing");
+  }
+
+  if (href === "/admin") {
+    return pathname.startsWith("/admin");
   }
 
   return pathname === href;
@@ -173,7 +176,7 @@ export function SiteHeaderClient({
               Qony AI
             </p>
             <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-emerald-50/42">
-              Structured workspace
+              Business case intelligence
             </p>
           </div>
         </Link>
@@ -262,6 +265,13 @@ export function SiteHeaderClient({
                         onClick={() => setMenuOpen(false)}
                       >
                         Dashboard
+                      </Link>
+                      <Link
+                        className="rounded-2xl px-3 py-3 text-sm font-semibold text-white/78 transition hover:bg-emerald-300/10 hover:text-white"
+                        href="/admin"
+                        onClick={() => setMenuOpen(false)}
+                      >
+                        Admin
                       </Link>
                       <Link
                         className="rounded-2xl px-3 py-3 text-sm font-semibold text-white/78 transition hover:bg-emerald-300/10 hover:text-white"

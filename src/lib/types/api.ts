@@ -1,7 +1,32 @@
 export type ProjectStatus = "draft" | "active" | "archived";
-export type NodeSource = "manual" | "ingest" | "ai";
-export type MutationActor = "user" | "ai";
-export type NodeRank = 1 | 2 | 3 | 4 | 5 | 6;
+export type KnowledgeNodeType =
+  | "problem"
+  | "solution"
+  | "assumption"
+  | "metric"
+  | "stakeholder"
+  | "risk"
+  | "opportunity"
+  | "constraint"
+  | "evidence"
+  | "market_data"
+  | "trend"
+  | "competitor"
+  | "regulation"
+  | "objective"
+  | "resource";
+export type KnowledgeRelationType =
+  | "causes"
+  | "supports"
+  | "contradicts"
+  | "requires"
+  | "affects"
+  | "related_to"
+  | "measured_by"
+  | "mitigated_by";
+export type KnowledgeNodeSource = "document" | "web" | "user";
+export type ExportType = "pitch_deck" | "business_document";
+export type ExportJobStatus = "pending" | "processing" | "completed" | "failed";
 
 export interface ResponseMeta {
   request_id?: string | null;
@@ -29,108 +54,6 @@ export interface Position {
   y: number;
 }
 
-export interface GraphValidationIssue {
-  code: string;
-  message: string;
-  node_id?: string | null;
-  edge_id?: string | null;
-}
-
-export interface GraphValidationSummary {
-  is_valid: boolean;
-  issues: GraphValidationIssue[];
-  reachable_node_count: number;
-  complete_branch_count: number;
-}
-
-export interface GraphNode {
-  id: string;
-  rank: NodeRank;
-  kind: string;
-  title: string;
-  content?: string | null;
-  source: NodeSource;
-  position: Position;
-  metadata: Record<string, unknown>;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface GraphEdge {
-  id: string;
-  source: string;
-  target: string;
-  label?: string | null;
-  metadata: Record<string, unknown>;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface GraphMetadata {
-  project_id: string;
-  workspace_id: string;
-  version: number;
-  updated_at: string;
-  validation: GraphValidationSummary;
-  attributes: Record<string, unknown>;
-}
-
-export interface WorkspaceGraph {
-  nodes: GraphNode[];
-  edges: GraphEdge[];
-  metadata: GraphMetadata;
-}
-
-export interface WorkspaceChatMessage {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  graph_version?: number | null;
-  applied_commands: string[];
-  ai_request_id?: string | null;
-  metadata: Record<string, unknown>;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface WorkspaceChatState {
-  messages: WorkspaceChatMessage[];
-}
-
-export interface WorkspacePayload {
-  project_id: string;
-  workspace_id: string;
-  graph: WorkspaceGraph;
-  chat: WorkspaceChatState;
-}
-
-export interface WorkspaceMutationResult {
-  project_id: string;
-  workspace_id: string;
-  graph: WorkspaceGraph;
-  applied_commands: string[];
-  ai_commands_applied: number;
-  ai_request_id?: string | null;
-}
-
-export interface WorkspaceChatRequest {
-  project_id: string;
-  message: string;
-  expected_version?: number | null;
-  selected_node_id?: string | null;
-}
-
-export interface WorkspaceChatResponse {
-  project_id: string;
-  workspace_id: string;
-  graph: WorkspaceGraph;
-  chat: WorkspaceChatState;
-  assistant_message: WorkspaceChatMessage;
-  applied_commands: string[];
-  ai_commands_applied: number;
-  ai_request_id?: string | null;
-}
-
 export interface ProjectCreateRequest {
   name: string;
   description?: string | null;
@@ -146,7 +69,7 @@ export interface ProjectUpdateRequest {
 
 export interface ProjectSummary {
   id: string;
-  workspace_id: string;
+  graph_id: string;
   name: string;
   description?: string | null;
   status: ProjectStatus;
@@ -160,143 +83,175 @@ export interface ProjectDetail extends ProjectSummary {
   user_name: string;
 }
 
-export interface DeleteResult {
-  deleted: boolean;
-}
-
 export interface ProjectListPayload {
   items: ProjectSummary[];
 }
 
-export interface IngestRequest {
+export interface KnowledgeGraphNode {
+  id: string;
+  type: KnowledgeNodeType;
+  title: string;
+  description?: string | null;
+  source: KnowledgeNodeSource;
+  is_enrichment: boolean;
+  source_url?: string | null;
+  position: Position;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface KnowledgeGraphEdge {
+  id: string;
+  source: string;
+  target: string;
+  relation_type: KnowledgeRelationType;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface KnowledgeGraph {
+  id: string;
   project_id: string;
-  raw_text: string;
-  source_filename?: string | null;
-  source_content_type?: string | null;
-  replace_existing?: boolean;
+  nodes: KnowledgeGraphNode[];
+  edges: KnowledgeGraphEdge[];
+  updated_at: string;
+  metadata: Record<string, unknown>;
+}
+
+export interface KnowledgeGraphUpdateRequest {
+  nodes: KnowledgeGraphNode[];
+  edges: KnowledgeGraphEdge[];
   metadata?: Record<string, unknown>;
 }
 
-export interface IngestPayload {
-  job: {
-    id: string;
-    project_id: string;
-    workspace_id: string;
-    requested_by_user_id: string;
-    status: "pending" | "processing" | "completed" | "failed";
-    provider: string;
-    model?: string | null;
-    fallback_used: boolean;
-    created_at: string;
-    updated_at: string;
-  };
-  graph: WorkspaceGraph;
-}
-
-export interface ExportStep {
-  node_id: string;
-  rank: NodeRank;
-  kind: string;
+export interface KnowledgeNodeCreateRequest {
+  type: KnowledgeNodeType;
   title: string;
-  content?: string | null;
-}
-
-export interface ExportChain {
-  chain_id: string;
-  steps: ExportStep[];
-}
-
-export interface ExportPreviewPayload {
-  snapshot_id: string;
-  project_id: string;
-  workspace_id: string;
-  generated_at: string;
-  branch_count: number;
-  chains: ExportChain[];
-  narrative?: string | null;
-  warnings: string[];
-}
-
-export interface NodeDraft {
-  id?: string;
-  rank: NodeRank;
-  title: string;
-  content?: string | null;
-  source?: NodeSource;
+  description?: string | null;
+  source?: KnowledgeNodeSource;
+  is_enrichment?: boolean;
+  source_url?: string | null;
   position?: Position;
   metadata?: Record<string, unknown>;
 }
 
-export interface EdgeDraft {
-  id?: string;
-  source: string;
-  target: string;
-  label?: string | null;
-  metadata?: Record<string, unknown>;
-}
-
-export interface AddNodeCommand {
-  type: "add_node";
-  node: NodeDraft;
-}
-
-export interface UpdateNodeCommand {
-  type: "update_node";
-  node_id: string;
-  rank?: NodeRank;
-  title?: string;
-  content?: string | null;
-  source?: NodeSource;
+export interface KnowledgeNodeUpdateRequest {
+  type?: KnowledgeNodeType;
+  title?: string | null;
+  description?: string | null;
+  source?: KnowledgeNodeSource;
+  is_enrichment?: boolean;
+  source_url?: string | null;
   position?: Position;
   metadata?: Record<string, unknown>;
   merge_metadata?: boolean;
 }
 
-export interface DeleteNodeCommand {
-  type: "delete_node";
-  node_id: string;
+export interface KnowledgeEdgeCreateRequest {
+  source: string;
+  target: string;
+  relation_type: KnowledgeRelationType;
+  metadata?: Record<string, unknown>;
 }
 
-export interface AddEdgeCommand {
-  type: "add_edge";
-  edge: EdgeDraft;
+export interface KnowledgeEdgeUpdateRequest {
+  relation_type?: KnowledgeRelationType;
+  metadata?: Record<string, unknown>;
+  merge_metadata?: boolean;
 }
 
-export interface DeleteEdgeCommand {
-  type: "delete_edge";
-  edge_id?: string;
-  source?: string;
-  target?: string;
+export interface GraphAIEditResponse {
+  graph: KnowledgeGraph;
+  summary: string;
 }
 
-export interface MoveNodeCommand {
-  type: "move_node";
-  node_id: string;
-  position?: Position;
-  rank?: NodeRank;
-}
-
-export type PatchCommand =
-  | AddNodeCommand
-  | UpdateNodeCommand
-  | DeleteNodeCommand
-  | AddEdgeCommand
-  | DeleteEdgeCommand
-  | MoveNodeCommand;
-
-export interface ApplyAIPatchCommand {
-  type: "apply_ai_patch";
-  instruction?: string | null;
-  commands?: PatchCommand[];
-  audit_metadata?: Record<string, unknown>;
-}
-
-export type MutationCommand = PatchCommand | ApplyAIPatchCommand;
-
-export interface WorkspaceMutationRequest {
+export interface IngestJobRead {
+  id: string;
   project_id: string;
-  expected_version?: number | null;
-  actor?: MutationActor;
-  reason?: string | null;
-  commands: MutationCommand[];
+  graph_id: string;
+  requested_by_user_id: string;
+  status: "pending" | "processing" | "completed" | "failed";
+  provider: string;
+  model?: string | null;
+  fallback_used: boolean;
+  source_filename?: string | null;
+  source_content_type?: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ExportJobRead {
+  id: string;
+  project_id: string;
+  graph_id: string;
+  export_type: ExportType;
+  status: ExportJobStatus;
+  output_url?: string | null;
+  slide_plan: Record<string, unknown>;
+  metadata: Record<string, unknown>;
+  error_message?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CheckoutRequest {
+  plan_id: string;
+  amount: number;
+  currency: string;
+  customer_email: string;
+  customer_name: string;
+}
+
+export interface CheckoutResponse {
+  order_id: string;
+  snap_token?: string | null;
+  redirect_url?: string | null;
+  provider: string;
+}
+
+export interface SubscriptionRead {
+  id: string;
+  user_id: string;
+  provider: string;
+  plan_id: string;
+  status: string;
+  order_id?: string | null;
+  current_period_end?: string | null;
+  metadata: Record<string, unknown>;
+}
+
+export interface AdminUserRead {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AdminMetricsRead {
+  user_count: number;
+  project_count: number;
+  graph_count: number;
+  upload_count: number;
+  scrape_count: number;
+  ai_edit_count: number;
+  export_count: number;
+}
+
+export interface FeatureFlagRead {
+  key: string;
+  enabled: boolean;
+  description: string;
+}
+
+export interface FeatureFlagList {
+  items: FeatureFlagRead[];
+}
+
+export interface DeleteResult {
+  deleted: boolean;
 }

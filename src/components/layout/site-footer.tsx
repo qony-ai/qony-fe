@@ -9,8 +9,8 @@ export function SiteFooter({ className }: { className?: string }) {
         <div>
           <p className="text-base font-semibold text-white">Qony AI</p>
           <p className="mt-2 max-w-xl text-white/48">
-            A structured AI workspace for serious problem-solving, evidence-led
-            analysis, and export-ready synthesis.
+            A business-case intelligence platform for typed graph analysis,
+            evidence-led reasoning, and export-ready synthesis.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-4">
@@ -20,8 +20,11 @@ export function SiteFooter({ className }: { className?: string }) {
           <Link className="transition hover:text-white" href="/dashboard">
             Dashboard
           </Link>
-          <Link className="transition hover:text-white" href="/about">
-            About
+          <Link className="transition hover:text-white" href="/pricing">
+            Pricing
+          </Link>
+          <Link className="transition hover:text-white" href="/admin">
+            Admin
           </Link>
         </div>
       </div>

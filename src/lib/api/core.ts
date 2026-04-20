@@ -1,19 +1,28 @@
 import {
+  type AdminMetricsRead,
+  type AdminUserRead,
   type ApiErrorResponse,
   type ApiResponse,
+  type CheckoutRequest,
+  type CheckoutResponse,
   type DeleteResult,
-  type ExportPreviewPayload,
-  type IngestPayload,
-  type IngestRequest,
+  type ExportJobRead,
+  type FeatureFlagList,
+  type GraphAIEditResponse,
+  type IngestJobRead,
+  type KnowledgeEdgeCreateRequest,
+  type KnowledgeEdgeUpdateRequest,
+  type KnowledgeGraph,
+  type KnowledgeGraphEdge,
+  type KnowledgeGraphNode,
+  type KnowledgeGraphUpdateRequest,
+  type KnowledgeNodeCreateRequest,
+  type KnowledgeNodeUpdateRequest,
   type ProjectCreateRequest,
   type ProjectDetail,
   type ProjectListPayload,
   type ProjectUpdateRequest,
-  type WorkspaceChatRequest,
-  type WorkspaceChatResponse,
-  type WorkspaceMutationRequest,
-  type WorkspaceMutationResult,
-  type WorkspacePayload,
+  type SubscriptionRead,
 } from "@/src/lib/types/api";
 import { apiEndpoints } from "@/src/lib/api/endpoints";
 
@@ -96,6 +105,9 @@ export function buildApiClient(fetcher: Fetcher) {
     async getProject(projectId: string) {
       return (await fetcher<ProjectDetail>(apiEndpoints.project(projectId))).data;
     },
+    async getProjectGraph(projectId: string) {
+      return (await fetcher<KnowledgeGraph>(apiEndpoints.projectGraph(projectId))).data;
+    },
     async updateProject(projectId: string, payload: ProjectUpdateRequest) {
       return (
         await fetcher<ProjectDetail>(apiEndpoints.project(projectId), {
@@ -111,45 +123,109 @@ export function buildApiClient(fetcher: Fetcher) {
         })
       ).data;
     },
-    async ingestProject(payload: IngestRequest) {
+    async ingestProjectFile(projectId: string, formData: FormData) {
       return (
-        await fetcher<IngestPayload>(apiEndpoints.ingest, {
-          method: "POST",
-          body: JSON.stringify(payload),
-        })
-      ).data;
-    },
-    async ingestProjectFormData(formData: FormData) {
-      return (
-        await fetcher<IngestPayload>(apiEndpoints.ingest, {
+        await fetcher<IngestJobRead>(apiEndpoints.projectIngest(projectId), {
           method: "POST",
           body: formData,
         })
       ).data;
     },
-    async getWorkspace(projectId: string) {
-      return (await fetcher<WorkspacePayload>(apiEndpoints.workspace(projectId))).data;
+    async getGraph(graphId: string) {
+      return (await fetcher<KnowledgeGraph>(apiEndpoints.graph(graphId))).data;
     },
-    async mutateWorkspace(payload: WorkspaceMutationRequest) {
+    async updateGraph(graphId: string, payload: KnowledgeGraphUpdateRequest) {
       return (
-        await fetcher<WorkspaceMutationResult>(apiEndpoints.mutateWorkspace, {
-          method: "PATCH",
+        await fetcher<KnowledgeGraph>(apiEndpoints.graph(graphId), {
+          method: "PUT",
           body: JSON.stringify(payload),
         })
       ).data;
     },
-    async chatWorkspace(payload: WorkspaceChatRequest) {
+    async aiEditGraph(graphId: string, prompt: string) {
       return (
-        await fetcher<WorkspaceChatResponse>(apiEndpoints.chatWorkspace, {
+        await fetcher<GraphAIEditResponse>(apiEndpoints.graphAiEdit(graphId), {
+          method: "POST",
+          body: JSON.stringify({ prompt }),
+        })
+      ).data;
+    },
+    async createNode(graphId: string, payload: KnowledgeNodeCreateRequest) {
+      return (
+        await fetcher<KnowledgeGraphNode>(apiEndpoints.nodeCollection(graphId), {
           method: "POST",
           body: JSON.stringify(payload),
         })
       ).data;
     },
-    async getExportPreview(projectId: string) {
+    async updateNode(nodeId: string, payload: KnowledgeNodeUpdateRequest) {
       return (
-        await fetcher<ExportPreviewPayload>(apiEndpoints.exportPreview(projectId))
+        await fetcher<KnowledgeGraphNode>(apiEndpoints.node(nodeId), {
+          method: "PATCH",
+          body: JSON.stringify(payload),
+        })
       ).data;
+    },
+    async deleteNode(nodeId: string) {
+      return (
+        await fetcher<DeleteResult>(apiEndpoints.node(nodeId), {
+          method: "DELETE",
+        })
+      ).data;
+    },
+    async createEdge(graphId: string, payload: KnowledgeEdgeCreateRequest) {
+      return (
+        await fetcher<KnowledgeGraphEdge>(apiEndpoints.edgeCollection(graphId), {
+          method: "POST",
+          body: JSON.stringify(payload),
+        })
+      ).data;
+    },
+    async updateEdge(edgeId: string, payload: KnowledgeEdgeUpdateRequest) {
+      return (
+        await fetcher<KnowledgeGraphEdge>(apiEndpoints.edge(edgeId), {
+          method: "PATCH",
+          body: JSON.stringify(payload),
+        })
+      ).data;
+    },
+    async deleteEdge(edgeId: string) {
+      return (
+        await fetcher<DeleteResult>(apiEndpoints.edge(edgeId), {
+          method: "DELETE",
+        })
+      ).data;
+    },
+    async createExport(graphId: string, exportType: "pitch_deck" | "business_document") {
+      return (
+        await fetcher<ExportJobRead>(apiEndpoints.graphExport(graphId), {
+          method: "POST",
+          body: JSON.stringify({ export_type: exportType }),
+        })
+      ).data;
+    },
+    async getExportJob(jobId: string) {
+      return (await fetcher<ExportJobRead>(apiEndpoints.exportJob(jobId))).data;
+    },
+    async checkout(payload: CheckoutRequest) {
+      return (
+        await fetcher<CheckoutResponse>(apiEndpoints.paymentCheckout, {
+          method: "POST",
+          body: JSON.stringify(payload),
+        })
+      ).data;
+    },
+    async getSubscription() {
+      return (await fetcher<SubscriptionRead | null>(apiEndpoints.paymentSubscription)).data;
+    },
+    async listAdminUsers() {
+      return (await fetcher<AdminUserRead[]>(apiEndpoints.adminUsers)).data;
+    },
+    async getAdminMetrics() {
+      return (await fetcher<AdminMetricsRead>(apiEndpoints.adminMetrics)).data;
+    },
+    async getAdminFlags() {
+      return (await fetcher<FeatureFlagList>(apiEndpoints.adminFlags)).data;
     },
   };
 }
