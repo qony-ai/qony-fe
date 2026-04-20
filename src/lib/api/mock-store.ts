@@ -2,7 +2,7 @@ import {
   type AddEdgeCommand,
   type AddNodeCommand,
   type ApiResponse,
-  type ExportChain,
+  type EdgeRelationType,
   type ExportPreviewPayload,
   type GraphEdge,
   type GraphMetadata,
@@ -12,7 +12,8 @@ import {
   type IngestPayload,
   type IngestRequest,
   type MutationCommand,
-  type NodeRank,
+  type NodeSource,
+  type NodeType,
   type ProjectCreateRequest,
   type ProjectDetail,
   type ProjectListPayload,
@@ -32,8 +33,7 @@ import {
   resolveFrameworkRecommendationContext,
 } from "@/src/lib/workspace/frameworks";
 import { QonyApiError } from "@/src/lib/api/core";
-import { readBranchIndex } from "@/src/lib/workspace/graph-layout";
-import { getNextRank } from "@/src/lib/workspace/ranks";
+import { getColumnX, readBranchIndex } from "@/src/lib/workspace/graph-layout";
 import { slugify } from "@/src/lib/utils";
 
 interface MockDatabase {
@@ -48,12 +48,12 @@ interface SeedProject {
   status: ProjectSummary["status"];
   nodes: Array<{
     id: string;
-    rank: NodeRank;
+    type: NodeType;
     title: string;
-    content: string;
+    description: string;
     branchIndex?: number;
   }>;
-  edges: Array<{ source: string; target: string }>;
+  edges: Array<{ source: string; target: string; type?: EdgeRelationType }>;
 }
 
 const seedProjects: SeedProject[] = [
@@ -65,88 +65,88 @@ const seedProjects: SeedProject[] = [
     nodes: [
       {
         id: "p1",
-        rank: 1,
+        type: "problem",
         title: "Why is revenue quality deteriorating despite traffic growth?",
-        content:
+        description:
           "The executive team needs a branch-level explanation for margin pressure before planning the 2026 budget.",
       },
       {
         id: "p2",
-        rank: 2,
+        type: "problem",
         title: "Traffic-to-basket conversion weakness",
-        content:
+        description:
           "Footfall is up, but customers are buying fewer high-margin items per visit.",
         branchIndex: 0,
       },
       {
         id: "p3",
-        rank: 2,
+        type: "problem",
         title: "Promotion mix is diluting profitability",
-        content:
+        description:
           "Discount-led acquisition is pulling demand forward while training buyers to wait for promotions.",
         branchIndex: 1,
       },
       {
         id: "p4",
-        rank: 3,
+        type: "assumption",
         title: "Assortment gaps reduce attachment purchases",
-        content:
+        description:
           "Stores with weak category adjacency are converting traffic into smaller baskets.",
         branchIndex: 0,
       },
       {
         id: "p5",
-        rank: 3,
+        type: "assumption",
         title: "Blanket discounting is cannibalizing full-price demand",
-        content:
+        description:
           "High-frequency discounting shifts sales into promo windows without materially expanding the customer base.",
         branchIndex: 1,
       },
       {
         id: "p6",
-        rank: 4,
+        type: "solution",
         title: "Compare basket mix by store archetype",
-        content:
+        description:
           "Segment stores by traffic growth, attachment-rate trend, and adjacent category availability.",
         branchIndex: 0,
       },
       {
         id: "p7",
-        rank: 4,
+        type: "solution",
         title: "Model incremental margin from promotion cohorts",
-        content:
+        description:
           "Estimate gross margin impact by campaign, customer segment, and reversion to full-price buying behavior.",
         branchIndex: 1,
       },
       {
         id: "p8",
-        rank: 5,
+        type: "evidence",
         title: "Category adjacency audit shows 14-point basket gap",
-        content:
+        description:
           "Stores missing three or more complementary categories underperform on average basket value by 14%.",
         branchIndex: 0,
       },
       {
         id: "p9",
-        rank: 5,
+        type: "evidence",
         title: "Promo cohort analysis shows low post-campaign retention",
-        content:
+        description:
           "Customers acquired through blanket markdowns have lower 90-day retention and lower full-price recovery.",
         branchIndex: 1,
       },
       {
         id: "p10",
-        rank: 6,
+        type: "objective",
         title: "Refocus growth on basket quality, not pure traffic",
-        content:
+        description:
           "Prioritize assortment repair in high-traffic stores and replace blanket markdowns with narrower, segment-led offers.",
         branchIndex: 0,
       },
       {
         id: "p11",
-        rank: 6,
+        type: "objective",
         title: "Promotions need margin guardrails",
-        content:
+        description:
           "Tie campaign approval to incremental margin thresholds and transition to targeted offers where elasticity supports it.",
         branchIndex: 1,
       },
@@ -158,8 +158,8 @@ const seedProjects: SeedProject[] = [
       { source: "p3", target: "p5" },
       { source: "p4", target: "p6" },
       { source: "p5", target: "p7" },
-      { source: "p6", target: "p8" },
-      { source: "p7", target: "p9" },
+      { source: "p6", target: "p8", type: "supports" },
+      { source: "p7", target: "p9", type: "supports" },
       { source: "p8", target: "p10" },
       { source: "p9", target: "p11" },
     ],
@@ -172,80 +172,80 @@ const seedProjects: SeedProject[] = [
     nodes: [
       {
         id: "m1",
-        rank: 1,
+        type: "problem",
         title: "Which customer segment creates the fastest path to repeat usage?",
-        content:
+        description:
           "We need a realistic wedge that proves value quickly and creates strong expansion economics.",
       },
       {
         id: "m2",
-        rank: 2,
+        type: "problem",
         title: "Consulting teams handling strategy cases",
-        content:
+        description:
           "Teams already operate with structured logic trees and benefit from faster synthesis.",
         branchIndex: 0,
       },
       {
         id: "m3",
-        rank: 2,
+        type: "problem",
         title: "Corporate strategy and planning teams",
-        content:
+        description:
           "Internal teams need cross-functional evidence gathering and reusable strategic narratives.",
         branchIndex: 1,
       },
       {
         id: "m4",
-        rank: 3,
+        type: "assumption",
         title: "Consulting teams have higher workflow urgency",
-        content:
+        description:
           "Billable case cycles make time savings immediately valuable and visible.",
         branchIndex: 0,
       },
       {
         id: "m5",
-        rank: 3,
+        type: "assumption",
         title: "Corporate teams have stickier longitudinal value",
-        content:
+        description:
           "Once embedded into planning rituals, the workspace becomes part of review and decision cadence.",
         branchIndex: 1,
       },
       {
         id: "m6",
-        rank: 4,
+        type: "solution",
         title: "Measure consulting ROI inside active case cycles",
-        content:
+        description:
           "Pilot teams can quantify time saved and show value within live engagements.",
         branchIndex: 0,
       },
       {
         id: "m7",
-        rank: 4,
+        type: "solution",
         title: "Map adoption triggers across planning cadences",
-        content:
+        description:
           "Recurring planning rituals create reuse, but rollout and change management move more slowly.",
         branchIndex: 1,
       },
       {
         id: "m8",
-        rank: 5,
+        type: "evidence",
         title: "Pilot teams show visible week-one time savings",
-        content:
+        description:
           "Early consulting pilots can demonstrate faster synthesis and clearer branch ownership within days.",
         branchIndex: 0,
       },
       {
         id: "m9",
-        rank: 5,
+        type: "evidence",
         title: "Planning teams show stronger long-run stickiness",
-        content:
+        description:
           "Internal strategy groups become sticky once templates and review rituals are in place, but the proof cycle is longer.",
         branchIndex: 1,
       },
       {
         id: "m10",
-        rank: 6,
+        type: "objective",
         title: "Start with consulting-style teams, then expand into internal strategy",
-        content:
+        description:
           "The wedge should optimize for urgency and demonstrable ROI, while the roadmap prepares templates for recurring internal planning use cases.",
         branchIndex: 0,
       },
@@ -257,8 +257,8 @@ const seedProjects: SeedProject[] = [
       { source: "m3", target: "m5" },
       { source: "m4", target: "m6" },
       { source: "m5", target: "m7" },
-      { source: "m6", target: "m8" },
-      { source: "m7", target: "m9" },
+      { source: "m6", target: "m8", type: "supports" },
+      { source: "m7", target: "m9", type: "supports" },
       { source: "m8", target: "m10" },
       { source: "m9", target: "m10" },
     ],
@@ -321,10 +321,10 @@ function createWorkspaceFromSeed(
   const nodes = seed.nodes.map((node, index) =>
     createGraphNode({
       id: node.id,
-      rank: node.rank,
+      type: node.type,
       title: node.title,
-      content: node.content,
-      source: seed.id === "case-empty-template" ? "manual" : "ingest",
+      description: node.description,
+      source: seed.id === "case-empty-template" ? "user" : "document",
       createdAt: timestamp,
       updatedAt: timestamp,
       branchIndex: node.branchIndex,
@@ -332,7 +332,13 @@ function createWorkspaceFromSeed(
     }),
   );
 
-  const edges = seed.edges.map((edge, index) => createGraphEdge(edge, timestamp, index));
+  const edges = seed.edges.map((edge, index) =>
+    createGraphEdge(
+      { source: edge.source, target: edge.target, type: edge.type ?? "related_to" },
+      timestamp,
+      index,
+    ),
+  );
   const metadata = buildGraphMetadata(project.id, project.workspace_id, nodes, edges, {
     ingest_mode: seed.nodes.length > 0 ? "mock-seed" : "mock-empty",
     provider_attempted: "mock-engine",
@@ -366,34 +372,42 @@ function createWorkspaceFromSeed(
 
 function createGraphNode({
   id,
-  rank,
+  type,
   title,
-  content,
+  description,
   source,
   createdAt,
   updatedAt,
   branchIndex,
   offset,
+  isEnrichment,
+  sourceUrl,
+  confidence,
 }: {
   id: string;
-  rank: NodeRank;
+  type: NodeType;
   title: string;
-  content: string;
-  source: GraphNode["source"];
+  description: string;
+  source: NodeSource;
   createdAt: string;
   updatedAt: string;
   branchIndex?: number;
   offset: number;
+  isEnrichment?: boolean;
+  sourceUrl?: string | null;
+  confidence?: number;
 }): GraphNode {
   return {
     id,
-    rank,
-    kind: slugify(title.split(" ").slice(0, 2).join(" ")) || `rank-${rank}`,
+    type,
     title,
-    content,
+    description,
     source,
+    is_enrichment: isEnrichment ?? false,
+    source_url: sourceUrl ?? null,
+    confidence: confidence ?? 1,
     position: {
-      x: (rank - 1) * 320,
+      x: getColumnX(type),
       y: (branchIndex ?? 0) * 230 + (offset % 2) * 18,
     },
     metadata:
@@ -406,12 +420,13 @@ function createGraphNode({
 }
 
 function createGraphEdge(
-  edge: { source: string; target: string },
+  edge: { source: string; target: string; type?: EdgeRelationType },
   timestamp: string,
   index: number,
 ): GraphEdge {
   return {
     id: `edge-${index}-${edge.source}-${edge.target}`,
+    type: edge.type ?? "related_to",
     source: edge.source,
     target: edge.target,
     label: null,
@@ -445,7 +460,7 @@ function validateGraph(
 ): GraphValidationSummary {
   const issues: GraphValidationIssue[] = [];
   const nodeMap = new Map(nodes.map((node) => [node.id, node]));
-  const roots = nodes.filter((node) => node.rank === 1);
+  const roots = nodes.filter((node) => node.type === "problem");
   const reachable = new Set<string>();
   const adjacency = new Map<string, string[]>();
 
@@ -462,11 +477,12 @@ function validateGraph(
       return;
     }
 
-    if (target.rank !== source.rank + 1) {
+    if (edge.type === "supports" && target.source === "web" && !target.source_url) {
       issues.push({
-        code: "invalid_rank_jump",
-        message: `Rank ${source.rank} can only connect to Rank ${source.rank + 1}.`,
-        edge_id: edge.id,
+        code: "invalid_web_enrichment",
+        message:
+          "Web-enriched nodes must include a source_url. Attach the source URL before exporting.",
+        node_id: target.id,
       });
     }
 
@@ -485,20 +501,16 @@ function validateGraph(
 
   if (nodes.length > 0 && roots.length === 0) {
     issues.push({
-      code: "missing_root",
-      message: "A valid workspace needs at least one Rank 1 node.",
-    });
-  }
-
-  if (roots.length > 1) {
-    issues.push({
-      code: "multiple_roots",
-      message: "A valid workspace can only have one Rank 1 node.",
+      code: "missing_problem",
+      message: "A valid workspace needs at least one problem node.",
     });
   }
 
   nodes.forEach((node) => {
-    if (node.rank !== 1 && !edges.some((edge) => edge.target === node.id)) {
+    if (node.type === "problem") {
+      return;
+    }
+    if (!edges.some((edge) => edge.target === node.id || edge.source === node.id)) {
       issues.push({
         code: "orphan_node",
         message: "Node is disconnected from the main logic tree.",
@@ -507,59 +519,12 @@ function validateGraph(
     }
   });
 
-  const completeBranchCount =
-    issues.length === 0 ? countCompleteBranches(roots, adjacency, nodeMap) : 0;
-
   return {
     is_valid: issues.length === 0,
     issues,
     reachable_node_count: reachable.size,
-    complete_branch_count: completeBranchCount,
+    complete_branch_count: issues.length === 0 ? nodes.length : 0,
   };
-}
-
-function countCompleteBranches(
-  roots: GraphNode[],
-  adjacency: Map<string, string[]>,
-  nodeMap: Map<string, GraphNode>,
-) {
-  return deriveCompleteNodePaths(roots, adjacency, nodeMap).length;
-}
-
-function deriveCompleteNodePaths(
-  roots: GraphNode[],
-  adjacency: Map<string, string[]>,
-  nodeMap: Map<string, GraphNode>,
-) {
-  const paths: GraphNode[][] = [];
-
-  function walk(path: GraphNode[]) {
-    const current = path[path.length - 1];
-    const nextIds = adjacency.get(current.id) ?? [];
-
-    if (nextIds.length === 0) {
-      if (
-        path.length === 6 &&
-        current.rank === 6 &&
-        path.every((node, index) => node.rank === index + 1)
-      ) {
-        paths.push(path);
-      }
-      return;
-    }
-
-    nextIds.forEach((id) => {
-      const nextNode = nodeMap.get(id);
-      if (!nextNode || path.some((node) => node.id === nextNode.id)) {
-        return;
-      }
-
-      walk([...path, nextNode]);
-    });
-  }
-
-  roots.forEach((root) => walk([root]));
-  return paths;
 }
 
 function summarizeValidationIssues(issues: GraphValidationIssue[]) {
@@ -571,17 +536,14 @@ function summarizeValidationIssues(issues: GraphValidationIssue[]) {
 
 function buildExportPreview(workspace: WorkspacePayload): ExportPreviewPayload {
   const validation = workspace.graph.metadata.validation;
-  const chains = validation.is_valid ? deriveChains(workspace.graph) : [];
   const warnings = [
     ...(!validation.is_valid
       ? [
           `Resolve workspace validation issues before exporting. ${summarizeValidationIssues(validation.issues)}`.trim(),
         ]
       : []),
-    ...(chains.length === 0
-      ? [
-          "No complete rank-1-to-rank-6 branch is available yet. Finish at least one branch before exporting.",
-        ]
+    ...(workspace.graph.nodes.length === 0
+      ? ["Workspace is empty. Seed at least one problem node before exporting."]
       : []),
   ];
 
@@ -590,36 +552,11 @@ function buildExportPreview(workspace: WorkspacePayload): ExportPreviewPayload {
     project_id: workspace.project_id,
     workspace_id: workspace.workspace_id,
     generated_at: nowIso(),
-    branch_count: chains.length,
-    chains,
-    narrative:
-      chains.length > 0
-        ? `Qony prepared ${chains.length} exportable logic branch${chains.length > 1 ? "es" : ""}. Review the active slide stream to tighten the final storyline before exporting.`
-        : validation.is_valid
-          ? "The workspace is still forming. Use the graph editor or copilot to complete at least one end-to-end branch."
-          : "The workspace cannot be exported yet. Resolve the validation issues in the canvas, then generate the preview again.",
+    graph_version: workspace.graph.metadata.version,
+    deliverable_type: null,
+    status: "stub",
     warnings,
   };
-}
-
-function deriveChains(graph: WorkspaceGraph): ExportChain[] {
-  const nodeMap = new Map(graph.nodes.map((node) => [node.id, node]));
-  const adjacency = new Map<string, string[]>();
-  graph.edges.forEach((edge) => {
-    adjacency.set(edge.source, [...(adjacency.get(edge.source) ?? []), edge.target]);
-  });
-
-  const roots = graph.nodes.filter((node) => node.rank === 1);
-  return deriveCompleteNodePaths(roots, adjacency, nodeMap).map((path, index) => ({
-    chain_id: `chain-${index + 1}`,
-    steps: path.map((node) => ({
-      node_id: node.id,
-      rank: node.rank,
-      kind: node.kind,
-      title: node.title,
-      content: node.content,
-    })),
-  }));
 }
 
 function readProject(projectId: string) {
@@ -705,63 +642,10 @@ function assertExpectedVersion(
   }
 }
 
-function assertSingleRootConstraint(
-  workspace: WorkspacePayload,
-  commands: MutationCommand[],
-) {
-  const rootIds = new Set(
-    workspace.graph.nodes
-      .filter((node) => node.rank === 1)
-      .map((node) => node.id),
-  );
-  let syntheticRootCount = 0;
-
-  commands.forEach((command) => {
-    if (command.type === "delete_node") {
-      rootIds.delete(command.node_id);
-      return;
-    }
-
-    if (
-      (command.type === "update_node" || command.type === "move_node") &&
-      command.rank !== undefined
-    ) {
-      if (command.rank === 1 && !rootIds.has(command.node_id) && rootIds.size > 0) {
-        throw new QonyApiError(
-          "Only one Rank 1 root node is allowed in a workspace.",
-          422,
-        );
-      }
-
-      if (command.rank === 1) {
-        rootIds.add(command.node_id);
-      } else {
-        rootIds.delete(command.node_id);
-      }
-
-      return;
-    }
-
-    if (command.type === "add_node" && command.node.rank === 1) {
-      if (rootIds.size > 0) {
-        throw new QonyApiError(
-          "Only one Rank 1 root node is allowed in a workspace.",
-          422,
-        );
-      }
-
-      rootIds.add(command.node.id ?? `pending-root-${syntheticRootCount}`);
-      syntheticRootCount += 1;
-    }
-  });
-}
-
 function applyWorkspaceCommands(
   workspace: WorkspacePayload,
   commands: MutationCommand[],
 ): WorkspacePayload {
-  assertSingleRootConstraint(workspace, commands);
-
   let currentGraph = clone(workspace.graph);
   const now = nowIso();
 
@@ -771,12 +655,14 @@ function applyWorkspaceCommands(
         const node = command.node;
         currentGraph.nodes.push({
           id: node.id ?? nextId("node"),
-          rank: node.rank,
-          kind: slugify(node.title) || `rank-${node.rank}`,
+          type: node.type,
           title: node.title,
-          content: node.content ?? null,
-          source: node.source ?? "manual",
-          position: node.position ?? { x: (node.rank - 1) * 320, y: 0 },
+          description: node.description,
+          source: node.source ?? "user",
+          is_enrichment: node.is_enrichment ?? false,
+          source_url: node.source_url ?? null,
+          confidence: node.confidence ?? 1,
+          position: node.position ?? { x: getColumnX(node.type), y: 0 },
           metadata: node.metadata ?? {},
           created_at: now,
           updated_at: now,
@@ -788,11 +674,25 @@ function applyWorkspaceCommands(
           node.id === command.node_id
             ? {
                 ...node,
-                rank: command.rank ?? node.rank,
+                type: command.node_type ?? node.type,
                 title: command.title ?? node.title,
-                content:
-                  command.content !== undefined ? command.content : node.content,
+                description:
+                  command.description !== undefined
+                    ? command.description
+                    : node.description,
                 source: command.source ?? node.source,
+                is_enrichment:
+                  command.is_enrichment !== undefined
+                    ? command.is_enrichment
+                    : node.is_enrichment,
+                source_url:
+                  command.source_url !== undefined
+                    ? command.source_url
+                    : node.source_url,
+                confidence:
+                  command.confidence !== undefined
+                    ? command.confidence
+                    : node.confidence,
                 position: command.position ?? node.position,
                 metadata:
                   command.merge_metadata && command.metadata
@@ -822,6 +722,7 @@ function applyWorkspaceCommands(
         if (!edgeExists) {
           currentGraph.edges.push({
             id: command.edge.id ?? nextId("edge"),
+            type: command.edge.type,
             source: command.edge.source,
             target: command.edge.target,
             label: command.edge.label ?? null,
@@ -848,8 +749,7 @@ function applyWorkspaceCommands(
           node.id === command.node_id
             ? {
                 ...node,
-                rank: command.rank ?? node.rank,
-                position: command.position ?? node.position,
+                position: command.position,
                 updated_at: now,
               }
             : node,
@@ -911,77 +811,64 @@ function buildIngestWorkspace(
 ): WorkspacePayload {
   const text =
     input.raw_text.trim() ||
-    "Uploaded material captured. Build the structured DAG from the extracted evidence.";
+    "Uploaded material captured. Build the structured graph from the extracted evidence.";
   const focusSentence = text.split(/[.!?]/).find(Boolean)?.trim() ?? project.name;
   const branchIndexA = 0;
   const branchIndexB = 1;
   const timestamp = nowIso();
 
-  const graph: WorkspaceGraph = {
-    nodes: [
-      createGraphNode({
-        id: nextId("problem"),
-        rank: 1,
-        title: focusSentence,
-        content: text.slice(0, 220),
-        source: "ingest",
-        createdAt: timestamp,
-        updatedAt: timestamp,
-        offset: 0,
-      }),
-      createGraphNode({
-        id: nextId("sub"),
-        rank: 2,
-        title: "Core demand-side drivers",
-        content: "Capture the demand-side dynamics surfaced by the source material.",
-        source: "ingest",
-        createdAt: timestamp,
-        updatedAt: timestamp,
-        branchIndex: branchIndexA,
-        offset: 1,
-      }),
-      createGraphNode({
-        id: nextId("sub"),
-        rank: 2,
-        title: "Operating model and capability gaps",
-        content: "Trace the internal execution issues implied by the source material.",
-        source: "ingest",
-        createdAt: timestamp,
-        updatedAt: timestamp,
-        branchIndex: branchIndexB,
-        offset: 2,
-      }),
-    ],
-    edges: [],
-    metadata: {
-      project_id: project.id,
-      workspace_id: project.workspace_id,
-      version: 1,
-      updated_at: timestamp,
-      validation: {
-        is_valid: true,
-        issues: [],
-        reachable_node_count: 0,
-        complete_branch_count: 0,
-      },
-      attributes: {},
-    },
-  };
+  const nodes: GraphNode[] = [
+    createGraphNode({
+      id: nextId("problem"),
+      type: "problem",
+      title: focusSentence,
+      description: text.slice(0, 220),
+      source: "document",
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      offset: 0,
+    }),
+    createGraphNode({
+      id: nextId("sub"),
+      type: "problem",
+      title: "Core demand-side drivers",
+      description: "Capture the demand-side dynamics surfaced by the source material.",
+      source: "document",
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      branchIndex: branchIndexA,
+      offset: 1,
+    }),
+    createGraphNode({
+      id: nextId("sub"),
+      type: "problem",
+      title: "Operating model and capability gaps",
+      description: "Trace the internal execution issues implied by the source material.",
+      source: "document",
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      branchIndex: branchIndexB,
+      offset: 2,
+    }),
+  ];
 
-  const root = graph.nodes[0];
-  const firstSub = graph.nodes[1];
-  const secondSub = graph.nodes[2];
+  const root = nodes[0];
+  const firstSub = nodes[1];
+  const secondSub = nodes[2];
 
-  graph.edges = [
+  const edges: GraphEdge[] = [
     createGraphEdge({ source: root.id, target: firstSub.id }, timestamp, 0),
     createGraphEdge({ source: root.id, target: secondSub.id }, timestamp, 1),
   ];
-  graph.metadata = buildGraphMetadata(project.id, project.workspace_id, graph.nodes, graph.edges, {
+
+  const metadata = buildGraphMetadata(project.id, project.workspace_id, nodes, edges, {
     ingest_mode: "mock-parser",
     source_filename: input.source_filename ?? null,
     provider_attempted: "mock-parser",
     extracted_summary: focusSentence,
   });
+
+  const graph: WorkspaceGraph = { nodes, edges, metadata };
 
   return {
     project_id: project.id,
@@ -1022,17 +909,17 @@ function appendIngestToWorkspace(
     );
   }
 
-  const root = workspace.graph.nodes.find((node) => node.rank === 1);
+  const root = workspace.graph.nodes.find((node) => node.type === "problem");
   if (!root) {
     throw new QonyApiError(
-      "The current workspace does not have a Rank 1 root. Repair it first or enable replace existing.",
+      "The current workspace does not have a problem node. Repair it first or enable replace existing.",
       409,
     );
   }
 
   const text =
     input.raw_text.trim() ||
-    "Uploaded material captured. Build the structured DAG from the extracted evidence.";
+    "Uploaded material captured. Build the structured graph from the extracted evidence.";
   const focusSentence = text.split(/[.!?]/).find(Boolean)?.trim() ?? project.name;
   const timestamp = nowIso();
   const nextBranchIndex =
@@ -1043,10 +930,10 @@ function appendIngestToWorkspace(
   const appendedNodes = [
     createGraphNode({
       id: nextId("sub"),
-      rank: 2,
+      type: "problem",
       title: "Fresh source signal from ingest",
-      content: focusSentence,
-      source: "ingest",
+      description: focusSentence,
+      source: "document",
       createdAt: timestamp,
       updatedAt: timestamp,
       branchIndex: nextBranchIndex,
@@ -1054,11 +941,11 @@ function appendIngestToWorkspace(
     }),
     createGraphNode({
       id: nextId("sub"),
-      rank: 2,
+      type: "problem",
       title: "Follow-up investigation branch",
-      content:
+      description:
         "Preserve the current graph and use this branch to unpack the newly ingested material.",
-      source: "ingest",
+      source: "document",
       createdAt: timestamp,
       updatedAt: timestamp,
       branchIndex: nextBranchIndex + 1,
@@ -1102,7 +989,7 @@ function appendIngestToWorkspace(
         createChatMessage({
           role: "assistant",
           content:
-            "Ingest completed without replacing the existing graph. I added two new Rank 2 branches under the current root so you can merge the new material into the active case.",
+            "Ingest completed without replacing the existing graph. I added two new sub-problem branches under the current root so you can merge the new material into the active case.",
           graphVersion: nextGraph.metadata.version,
           appliedCommands: ["add_node", "add_edge"],
           createdAt: timestamp,
@@ -1126,119 +1013,126 @@ function buildAssistantPatch(
   const lowerMessage = request.message.toLowerCase();
   const commands: MutationCommand[] = [];
 
-  const firstRank2 = workspace.graph.nodes.find((node) => node.rank === 2) ?? null;
-  const firstRank3 = workspace.graph.nodes.find((node) => node.rank === 3) ?? null;
-  const firstRank4 = workspace.graph.nodes.find((node) => node.rank === 4) ?? null;
+  const firstProblem =
+    workspace.graph.nodes.find(
+      (node) => node.type === "problem" && node.metadata.branch_index !== undefined,
+    ) ?? workspace.graph.nodes.find((node) => node.type === "problem") ?? null;
+  const firstAssumption =
+    workspace.graph.nodes.find((node) => node.type === "assumption") ?? null;
+  const firstSolution =
+    workspace.graph.nodes.find((node) => node.type === "solution") ?? null;
+  const firstEvidence =
+    workspace.graph.nodes.find((node) => node.type === "evidence") ?? null;
 
-  if (lowerMessage.includes("hypothesis") && firstRank2) {
+  if (lowerMessage.includes("hypothesis") && firstProblem) {
     const newNodeId = nextId("hypothesis");
     commands.push({
       type: "add_node",
       node: {
         id: newNodeId,
-        rank: 3,
+        type: "assumption",
         title: "New AI-generated hypothesis",
-        content:
+        description:
           "This hypothesis was added by the mock copilot to extend the selected sub-problem branch.",
-        source: "ai",
+        source: "user",
         position: {
-          x: 640,
+          x: getColumnX("assumption"),
           y: 220,
         },
         metadata: {
-          branch_index: firstRank2.metadata.branch_index ?? 0,
+          branch_index: firstProblem.metadata.branch_index ?? 0,
         },
       },
     } satisfies AddNodeCommand);
     commands.push({
       type: "add_edge",
       edge: {
-        source: firstRank2.id,
+        type: "related_to",
+        source: firstProblem.id,
         target: newNodeId,
       },
     } satisfies AddEdgeCommand);
   }
 
   if (lowerMessage.includes("evidence") || lowerMessage.includes("data")) {
-    const parent = firstRank4 ?? workspace.graph.nodes.find((node) => node.rank === 3) ?? null;
+    const parent = firstSolution ?? firstAssumption;
     if (parent) {
-      const nextRank = getNextRank(parent.rank);
-      if (nextRank) {
-        const newNodeId = nextId("evidence");
-        commands.push({
-          type: "add_node",
-          node: {
-            id: newNodeId,
-            rank: nextRank,
-            title: "AI-suggested evidence pack",
-            content:
-              "Mock evidence block summarizing what to collect next for this branch.",
-            source: "ai",
-            position: {
-              x: parent.position.x + 320,
-              y: parent.position.y + 32,
-            },
-            metadata: {
-              branch_index: parent.metadata.branch_index ?? 0,
-            },
+      const newNodeId = nextId("evidence");
+      commands.push({
+        type: "add_node",
+        node: {
+          id: newNodeId,
+          type: "evidence",
+          title: "AI-suggested evidence pack",
+          description:
+            "Mock evidence block summarizing what to collect next for this branch.",
+          source: "user",
+          position: {
+            x: parent.position.x + 320,
+            y: parent.position.y + 32,
           },
-        } satisfies AddNodeCommand);
-        commands.push({
-          type: "add_edge",
-          edge: {
-            source: parent.id,
-            target: newNodeId,
+          metadata: {
+            branch_index: parent.metadata.branch_index ?? 0,
           },
-        } satisfies AddEdgeCommand);
-      }
+        },
+      } satisfies AddNodeCommand);
+      commands.push({
+        type: "add_edge",
+        edge: {
+          type: "supports",
+          source: parent.id,
+          target: newNodeId,
+        },
+      } satisfies AddEdgeCommand);
     }
   }
 
   if (
     (lowerMessage.includes("framework") || lowerMessage.includes("analysis")) &&
-    firstRank3
+    firstAssumption
   ) {
     const newNodeId = nextId("framework");
     commands.push({
       type: "add_node",
       node: {
         id: newNodeId,
-        rank: 4,
+        type: "solution",
         title: "AI-recommended framework",
-        content:
+        description:
           "Recommended framework: Driver Tree.\n\nUse this branch to decompose the hypothesis into measurable drivers, prioritize the largest gap, and define the evidence required to confirm it.",
-        source: "ai",
+        source: "user",
         position: {
-          x: firstRank3.position.x + 320,
-          y: firstRank3.position.y,
+          x: firstAssumption.position.x + 320,
+          y: firstAssumption.position.y,
         },
         metadata: {
-          branch_index: firstRank3.metadata.branch_index ?? 0,
+          branch_index: firstAssumption.metadata.branch_index ?? 0,
         },
       },
     } satisfies AddNodeCommand);
     commands.push({
       type: "add_edge",
       edge: {
-        source: firstRank3.id,
+        type: "related_to",
+        source: firstAssumption.id,
         target: newNodeId,
       },
     } satisfies AddEdgeCommand);
   }
 
   if (lowerMessage.includes("synthesis")) {
-    const parent = workspace.graph.nodes.find((node) => node.rank === 5) ?? null;
+    const parent = firstEvidence ?? firstSolution;
     if (parent) {
       const newNodeId = nextId("synthesis");
       commands.push({
         type: "add_node",
         node: {
           id: newNodeId,
-          rank: 6,
+          type: "objective",
           title: "AI draft synthesis",
-          content:
+          description:
             "The mock copilot generated a first-pass synthesis. Tighten the conclusion and export once the branch is complete.",
-          source: "ai",
+          source: "user",
           position: {
             x: parent.position.x + 320,
             y: parent.position.y,
@@ -1251,6 +1145,7 @@ function buildAssistantPatch(
       commands.push({
         type: "add_edge",
         edge: {
+          type: "related_to",
           source: parent.id,
           target: newNodeId,
         },
@@ -1287,7 +1182,7 @@ function buildFrameworkAwareMockResponse(
   const lower = request.message.toLowerCase();
   const wantsGraphMutation =
     /(add|apply|buat|tambahkan|masukkan|masukin|taruh|pakai|use)/.test(lower) &&
-    /(graph|canvas|node|rank 4|framework)/.test(lower);
+    /(graph|canvas|node|solution|framework)/.test(lower);
 
   if (!wantsGraphMutation) {
     return {
@@ -1304,8 +1199,8 @@ function buildFrameworkAwareMockResponse(
           type: "update_node",
           node_id: targetFrameworkNode.id,
           title: suggestion.title,
-          content: suggestion.content,
-          source: "ai",
+          description: suggestion.content,
+          source: "user",
           metadata: {
             framework_key: suggestion.id,
             recommended_for: context.anchorNode.id,
@@ -1324,10 +1219,10 @@ function buildFrameworkAwareMockResponse(
         type: "add_node",
         node: {
           id: newNodeId,
-          rank: 4,
+          type: "solution",
           title: suggestion.title,
-          content: suggestion.content,
-          source: "ai",
+          description: suggestion.content,
+          source: "user",
           position: {
             x: context.anchorNode.position.x + 320,
             y: context.anchorNode.position.y,
@@ -1342,12 +1237,13 @@ function buildFrameworkAwareMockResponse(
       {
         type: "add_edge",
         edge: {
+          type: "related_to",
           source: context.anchorNode.id,
           target: newNodeId,
         },
       } satisfies AddEdgeCommand,
     ],
-    summary: `Saya tambahkan ${suggestion.title} sebagai Rank 4 framework untuk branch "${context.anchorNode.title}".`,
+    summary: `Saya tambahkan ${suggestion.title} sebagai solution node untuk branch "${context.anchorNode.title}".`,
   };
 }
 
@@ -1522,7 +1418,7 @@ export async function mockChatWorkspace(
       frameworkResponse?.summary ??
       (commands.length > 0
         ? `I applied ${commands.length} graph change${commands.length > 1 ? "s" : ""} from your prompt and refreshed the branch structure.`
-        : "I reviewed the branch. No structural changes were applied, but the next step is to strengthen the weakest rank transition with new evidence or synthesis.");
+        : "I reviewed the branch. No structural changes were applied, but the next step is to strengthen the weakest transition with new evidence or synthesis.");
 
     return {
       ...nextGraphWorkspace,

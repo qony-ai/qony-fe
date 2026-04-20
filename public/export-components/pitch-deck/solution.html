@@ -1,0 +1,14 @@
+<section class="slide slide-solution">
+  <header class="slide-header">
+    <span class="eyebrow">Solution</span>
+    <h1>{{headline}}</h1>
+  </header>
+  <p class="description">{{description}}</p>
+  {{#if key_points}}
+  <ul class="key-points">
+    {{#each key_points}}
+    <li>{{this}}</li>
+    {{/each}}
+  </ul>
+  {{/if}}
+</section>

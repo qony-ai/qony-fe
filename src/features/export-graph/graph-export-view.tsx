@@ -47,7 +47,7 @@ export function GraphExportView({
       ...node,
       x: node.position.x - minX + boardPadding,
       y: node.position.y - minY + boardPadding,
-      definition: getRankDefinition(node.rank),
+      definition: getRankDefinition(node.type),
     }));
 
     const nodeRectMap = new Map(
@@ -83,8 +83,9 @@ export function GraphExportView({
       })
       .filter((edge): edge is NonNullable<typeof edge> => edge !== null);
 
+    const lastRankType = orderedRanks[orderedRanks.length - 1];
     const boardWidth = Math.max(
-      getColumnX(6) - minX + graphNodeWidth + boardPadding * 2,
+      getColumnX(lastRankType) - minX + graphNodeWidth + boardPadding * 2,
       ...nodes.map((node) => node.x + graphNodeWidth + boardPadding),
     );
     const boardHeight = Math.max(
@@ -166,11 +167,16 @@ export function GraphExportView({
                 width: graphBoard.boardWidth,
               }}
             >
-              <div className="absolute inset-0 grid grid-cols-6">
+              <div
+                className="absolute inset-0 grid"
+                style={{
+                  gridTemplateColumns: `repeat(${graphBoard.rankColumns.length}, minmax(0, 1fr))`,
+                }}
+              >
                 {graphBoard.rankColumns.map((column) => (
                   <div
                     className="border-r border-emerald-200/10"
-                    key={column.definition.rank}
+                    key={column.definition.type}
                     style={{
                       background: `linear-gradient(180deg, color-mix(in srgb, ${column.definition.accent} 11%, transparent), transparent 28%)`,
                     }}
@@ -181,11 +187,11 @@ export function GraphExportView({
               {graphBoard.rankColumns.map((column) => (
                 <div
                   className="absolute top-5 z-10 rounded-2xl border border-emerald-200/10 bg-[#08392d]/76 px-3 py-2 shadow-[0_10px_24px_rgba(0,0,0,0.14)] backdrop-blur-xl"
-                  key={`label-${column.definition.rank}`}
+                  key={`label-${column.definition.type}`}
                   style={{ left: column.x }}
                 >
                   <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-white/42">
-                    Rank {column.definition.rank}
+                    {column.definition.type.replaceAll("_", " ")}
                   </p>
                   <p className="mt-1 text-xs font-semibold text-white/72">
                     {column.definition.shortTitle}
@@ -238,7 +244,7 @@ export function GraphExportView({
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-white/42">
-                        Rank {node.rank}
+                        {node.type.replaceAll("_", " ")}
                       </p>
                       <p className="mt-2 text-xs font-semibold uppercase tracking-[0.16em] text-white/56">
                         {node.definition.shortTitle}
@@ -252,7 +258,7 @@ export function GraphExportView({
                     {truncate(node.title, 80)}
                   </h3>
                   <p className="mt-3 text-sm leading-6 text-white/58">
-                    {truncate(node.content ?? "No content added yet.", 120)}
+                    {truncate(node.description || "No content added yet.", 120)}
                   </p>
                 </article>
               ))}

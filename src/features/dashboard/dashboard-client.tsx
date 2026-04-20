@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useDeferredValue, useMemo, useState, useTransition } from "react";
+import { useDeferredValue, useMemo, useState } from "react";
 import {
   ArrowUpRight,
   Clock3,
@@ -17,8 +17,11 @@ import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { Panel, PanelHeader } from "@/src/components/ui/panel";
-import { browserApi } from "@/src/lib/api/client";
 import type { AuthSession } from "@/src/lib/auth/types";
+import {
+  useDeleteProjectMutation,
+  useProjectsQuery,
+} from "@/src/lib/query/hooks/use-projects";
 import type { ProjectSummary } from "@/src/lib/types/api";
 import { cn, formatDate, formatRelativeHours } from "@/src/lib/utils";
 
@@ -37,11 +40,21 @@ export function DashboardClient({
   initialProjects,
   initialSession = null,
 }: DashboardClientProps) {
-  const [projects, setProjects] = useState(initialProjects);
   const [query, setQuery] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("recent");
-  const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
+
+  const projectsQuery = useProjectsQuery({ initialData: initialProjects });
+  const deleteProject = useDeleteProjectMutation();
+
+  const projects = projectsQuery.data ?? initialProjects;
+  const loadError =
+    projectsQuery.error instanceof Error
+      ? projectsQuery.error.message
+      : null;
+  const deleteError =
+    deleteProject.error instanceof Error ? deleteProject.error.message : null;
+  const error = deleteError ?? loadError;
+  const isPending = deleteProject.isPending;
 
   const deferredQuery = useDeferredValue(query);
 
@@ -104,21 +117,7 @@ export function DashboardClient({
       return;
     }
 
-    startTransition(async () => {
-      try {
-        await browserApi.deleteProject(project.id);
-        setProjects((current) =>
-          current.filter((currentProject) => currentProject.id !== project.id),
-        );
-        setError(null);
-      } catch (requestError) {
-        setError(
-          requestError instanceof Error
-            ? requestError.message
-            : "Failed to delete project.",
-        );
-      }
-    });
+    deleteProject.mutate(project.id);
   }
 
   return (

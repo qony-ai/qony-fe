@@ -1,0 +1,11 @@
+<section class="section section-executive-summary">
+  <h1>{{title}}</h1>
+  <p class="summary">{{summary}}</p>
+  {{#if highlights}}
+  <ul class="highlights">
+    {{#each highlights}}
+    <li>{{this}}</li>
+    {{/each}}
+  </ul>
+  {{/if}}
+</section>

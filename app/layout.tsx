@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import type { Viewport } from "next";
 import localFont from "next/font/local";
 
+import { QueryProvider } from "@/src/lib/query/provider";
+
 import "./globals.css";
 
 const plusJakartaSans = localFont({
@@ -73,7 +75,9 @@ export default function RootLayout({
       lang="en"
       className={`${plusJakartaSans.variable} ${plexMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full">{children}</body>
+      <body className="min-h-full">
+        <QueryProvider>{children}</QueryProvider>
+      </body>
     </html>
   );
 }

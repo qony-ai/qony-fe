@@ -1,7 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import type { GraphEdge, GraphNode } from "@/src/lib/types/api";
+import type {
+  EdgeRelationType,
+  GraphEdge,
+  GraphNode,
+  NodeType,
+} from "@/src/lib/types/api";
 import {
   autoLayoutGraph,
   clampCanvasPosition,
@@ -11,17 +16,19 @@ import {
 
 function buildNode(
   id: string,
-  rank: GraphNode["rank"],
+  type: NodeType,
   branchIndex = 0,
 ): GraphNode {
   const timestamp = new Date().toISOString();
   return {
     id,
-    rank,
-    kind: `rank-${rank}`,
-    title: `${id}-${rank}`,
-    content: "",
-    source: "manual",
+    type,
+    title: `${id}-${type}`,
+    description: "",
+    source: "user",
+    is_enrichment: false,
+    source_url: null,
+    confidence: 1,
     position: { x: 0, y: branchIndex * 200 },
     metadata: { branch_index: branchIndex },
     created_at: timestamp,
@@ -29,10 +36,16 @@ function buildNode(
   };
 }
 
-function buildEdge(id: string, source: string, target: string): GraphEdge {
+function buildEdge(
+  id: string,
+  source: string,
+  target: string,
+  type: EdgeRelationType = "related_to",
+): GraphEdge {
   const timestamp = new Date().toISOString();
   return {
     id,
+    type,
     source,
     target,
     label: null,
@@ -42,57 +55,57 @@ function buildEdge(id: string, source: string, target: string): GraphEdge {
   };
 }
 
-test("autoLayoutGraph snaps nodes into their rank columns", () => {
+test("autoLayoutGraph snaps nodes into their type columns", () => {
   const nodes = [
-    buildNode("problem", 1),
-    buildNode("sub", 2),
-    buildNode("hypothesis", 3),
+    buildNode("problem", "problem"),
+    buildNode("stake", "stakeholder"),
+    buildNode("hypothesis", "assumption"),
   ];
   const edges = [
-    buildEdge("e1", "problem", "sub"),
-    buildEdge("e2", "sub", "hypothesis"),
+    buildEdge("e1", "problem", "stake"),
+    buildEdge("e2", "stake", "hypothesis"),
   ];
 
   const layout = autoLayoutGraph(nodes, edges);
 
-  assert.equal(layout.get("problem")?.x, getColumnX(1));
-  assert.equal(layout.get("sub")?.x, getColumnX(2));
-  assert.equal(layout.get("hypothesis")?.x, getColumnX(3));
+  assert.equal(layout.get("problem")?.x, getColumnX("problem"));
+  assert.equal(layout.get("stake")?.x, getColumnX("stakeholder"));
+  assert.equal(layout.get("hypothesis")?.x, getColumnX("assumption"));
 });
 
-test("autoLayoutGraph avoids overlap for nodes in the same rank", () => {
+test("autoLayoutGraph avoids overlap for nodes of the same type", () => {
   const nodes = [
-    buildNode("problem", 1),
-    buildNode("sub-a", 2, 0),
-    buildNode("sub-b", 2, 1),
-    buildNode("sub-c", 2, 2),
+    buildNode("problem", "problem"),
+    buildNode("stake-a", "stakeholder", 0),
+    buildNode("stake-b", "stakeholder", 1),
+    buildNode("stake-c", "stakeholder", 2),
   ];
   const edges = [
-    buildEdge("e1", "problem", "sub-a"),
-    buildEdge("e2", "problem", "sub-b"),
-    buildEdge("e3", "problem", "sub-c"),
+    buildEdge("e1", "problem", "stake-a"),
+    buildEdge("e2", "problem", "stake-b"),
+    buildEdge("e3", "problem", "stake-c"),
   ];
 
   const layout = autoLayoutGraph(nodes, edges);
-  const rank2Ys = ["sub-a", "sub-b", "sub-c"]
+  const stakeYs = ["stake-a", "stake-b", "stake-c"]
     .map((id) => layout.get(id)?.y ?? 0)
     .toSorted((left, right) => left - right);
 
-  assert.ok(rank2Ys[1] - rank2Ys[0] >= 168);
-  assert.ok(rank2Ys[2] - rank2Ys[1] >= 168);
+  assert.ok(stakeYs[1] - stakeYs[0] >= 168);
+  assert.ok(stakeYs[2] - stakeYs[1] >= 168);
 });
 
 test("getHighlightedBranch returns connected ancestors and descendants", () => {
   const graph = {
     nodes: [
-      buildNode("problem", 1),
-      buildNode("sub", 2),
-      buildNode("hypothesis", 3),
-      buildNode("framework", 4),
+      buildNode("problem", "problem"),
+      buildNode("stake", "stakeholder"),
+      buildNode("hypothesis", "assumption"),
+      buildNode("framework", "solution"),
     ],
     edges: [
-      buildEdge("e1", "problem", "sub"),
-      buildEdge("e2", "sub", "hypothesis"),
+      buildEdge("e1", "problem", "stake"),
+      buildEdge("e2", "stake", "hypothesis"),
       buildEdge("e3", "hypothesis", "framework"),
     ],
     metadata: {
@@ -114,7 +127,7 @@ test("getHighlightedBranch returns connected ancestors and descendants", () => {
 
   assert.deepEqual(
     [...highlighted.nodeIds].toSorted(),
-    ["framework", "hypothesis", "problem", "sub"],
+    ["framework", "hypothesis", "problem", "stake"],
   );
   assert.deepEqual([...highlighted.edgeIds].toSorted(), ["e1", "e2", "e3"]);
 });

@@ -1,0 +1,125 @@
+{
+  "$schema": "https://qony.ai/schemas/export-components.v1.json",
+  "manifest_version": "0.1.0",
+  "description": "Export component library. Backend renders the HTML templates per slide plan returned by the AI router. Page format is fixed per deliverable_type (pitch_deck = A4 landscape, business_document = A4 portrait).",
+  "deliverable_types": {
+    "pitch_deck": {
+      "page_format": "A4 landscape",
+      "one_per_page": "slide"
+    },
+    "business_document": {
+      "page_format": "A4 portrait",
+      "one_per_page": "section"
+    }
+  },
+  "components": [
+    {
+      "key": "pitch_deck.cover",
+      "deliverable_type": "pitch_deck",
+      "template": "pitch-deck/cover.html",
+      "description": "Title slide with project name, tagline, and author.",
+      "variables": {
+        "title": { "type": "string", "required": true },
+        "tagline": { "type": "string", "required": false },
+        "author": { "type": "string", "required": false },
+        "date": { "type": "string", "required": false }
+      }
+    },
+    {
+      "key": "pitch_deck.problem",
+      "deliverable_type": "pitch_deck",
+      "template": "pitch-deck/problem.html",
+      "description": "Problem framing slide. Typically rendered from a node of type 'problem'.",
+      "variables": {
+        "main_problem": { "type": "string", "required": true },
+        "sub_points": { "type": "string[]", "required": false },
+        "statistic": { "type": "string", "required": false }
+      }
+    },
+    {
+      "key": "pitch_deck.solution",
+      "deliverable_type": "pitch_deck",
+      "template": "pitch-deck/solution.html",
+      "description": "Proposed solution slide. Rendered from a node of type 'solution'.",
+      "variables": {
+        "headline": { "type": "string", "required": true },
+        "description": { "type": "string", "required": true },
+        "key_points": { "type": "string[]", "required": false }
+      }
+    },
+    {
+      "key": "pitch_deck.metric",
+      "deliverable_type": "pitch_deck",
+      "template": "pitch-deck/metric.html",
+      "description": "Metric / evidence slide — large number + supporting label.",
+      "variables": {
+        "headline": { "type": "string", "required": true },
+        "metric_value": { "type": "string", "required": true },
+        "metric_label": { "type": "string", "required": true },
+        "source_url": { "type": "string", "required": false }
+      }
+    },
+    {
+      "key": "pitch_deck.closing",
+      "deliverable_type": "pitch_deck",
+      "template": "pitch-deck/closing.html",
+      "description": "Closing / call-to-action slide.",
+      "variables": {
+        "headline": { "type": "string", "required": true },
+        "ask": { "type": "string", "required": false },
+        "contact": { "type": "string", "required": false }
+      }
+    },
+    {
+      "key": "business_document.executive_summary",
+      "deliverable_type": "business_document",
+      "template": "business-document/executive-summary.html",
+      "description": "Opening section summarising problem, solution, and expected outcome.",
+      "variables": {
+        "title": { "type": "string", "required": true },
+        "summary": { "type": "string", "required": true },
+        "highlights": { "type": "string[]", "required": false }
+      }
+    },
+    {
+      "key": "business_document.problem_analysis",
+      "deliverable_type": "business_document",
+      "template": "business-document/problem-analysis.html",
+      "description": "Detailed problem analysis section.",
+      "variables": {
+        "title": { "type": "string", "required": true },
+        "body": { "type": "string", "required": true },
+        "evidence": { "type": "string[]", "required": false }
+      }
+    },
+    {
+      "key": "business_document.recommendation",
+      "deliverable_type": "business_document",
+      "template": "business-document/recommendation.html",
+      "description": "Recommendation / proposed solution section.",
+      "variables": {
+        "title": { "type": "string", "required": true },
+        "body": { "type": "string", "required": true },
+        "next_steps": { "type": "string[]", "required": false }
+      }
+    },
+    {
+      "key": "business_document.risk_register",
+      "deliverable_type": "business_document",
+      "template": "business-document/risk-register.html",
+      "description": "Risk register rendered from nodes of type 'risk'.",
+      "variables": {
+        "title": { "type": "string", "required": true },
+        "risks": {
+          "type": "object[]",
+          "required": true,
+          "item_schema": {
+            "title": "string",
+            "description": "string",
+            "mitigation": "string?"
+          }
+        }
+      }
+    }
+  ]
+}

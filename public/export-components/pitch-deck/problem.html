@@ -1,0 +1,16 @@
+<section class="slide slide-problem">
+  <header class="slide-header">
+    <span class="eyebrow">Problem</span>
+    <h1>{{main_problem}}</h1>
+  </header>
+  {{#if sub_points}}
+  <ul class="sub-points">
+    {{#each sub_points}}
+    <li>{{this}}</li>
+    {{/each}}
+  </ul>
+  {{/if}}
+  {{#if statistic}}
+  <aside class="stat">{{statistic}}</aside>
+  {{/if}}
+</section>

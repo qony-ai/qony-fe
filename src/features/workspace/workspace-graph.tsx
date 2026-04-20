@@ -21,7 +21,7 @@ import {
 } from "@xyflow/react";
 import { Eye, Plus } from "lucide-react";
 
-import type { GraphNode, NodeRank, WorkspaceGraph } from "@/src/lib/types/api";
+import type { GraphNode, NodeType, WorkspaceGraph } from "@/src/lib/types/api";
 import { cn, truncate } from "@/src/lib/utils";
 import {
   clampCanvasPosition,
@@ -29,7 +29,7 @@ import {
   getColumnX,
   graphSnapSize,
 } from "@/src/lib/workspace/graph-layout";
-import { getNextRank, getRankDefinition, orderedRanks } from "@/src/lib/workspace/ranks";
+import { getRankDefinition, orderedRanks } from "@/src/lib/workspace/ranks";
 
 interface WorkspaceGraphProps {
   graph: WorkspaceGraph;
@@ -43,12 +43,11 @@ interface WorkspaceGraphProps {
 
 interface WorkspaceNodeData extends Record<string, unknown> {
   canCreateChild: boolean;
-  content: string | null;
+  description: string | null;
   highlighted: boolean;
-  kind: string;
   onInspectNode: (nodeId: string) => void;
   onQuickAddNode: (nodeId: string) => void;
-  rank: NodeRank;
+  type: NodeType;
   source: GraphNode["source"];
   title: string;
 }
@@ -114,10 +113,6 @@ export function WorkspaceGraph({
         return false;
       }
 
-      if (target.rank !== source.rank + 1) {
-        return false;
-      }
-
       return !edgeKeySet.has(`${source.id}->${target.id}`);
     };
   }, [graph.edges, graph.nodes]);
@@ -129,7 +124,7 @@ export function WorkspaceGraph({
       <div className="pointer-events-none absolute inset-x-4 top-20 z-10 flex flex-wrap items-start justify-between gap-3">
         <div className="flex flex-wrap gap-2">
           <div className="pointer-events-auto rounded-full border border-emerald-200/12 bg-[#0a3f31]/90 px-4 py-2 text-xs font-medium text-white/78 shadow-[0_12px_30px_rgba(0,0,0,0.22)] backdrop-blur-xl">
-            Adjacent-rank connections only
+            Typed-graph connections
           </div>
           <div className="pointer-events-auto rounded-full border border-emerald-200/12 bg-[#0a3f31]/90 px-4 py-2 text-xs font-medium text-white/78 shadow-[0_12px_30px_rgba(0,0,0,0.22)] backdrop-blur-xl">
             Drag nodes freely across the canvas
@@ -201,7 +196,7 @@ export function WorkspaceGraph({
         <MiniMap
           className="!bottom-4 !right-4 !rounded-2xl !border !border-emerald-200/12 !bg-[#0a3f31]/88"
           maskColor="rgba(8,53,42,0.62)"
-          nodeColor={(node) => getRankDefinition((node.data as WorkspaceNodeData).rank).accent}
+          nodeColor={(node) => getRankDefinition((node.data as WorkspaceNodeData).type).accent}
           nodeStrokeColor={() => "rgba(214,255,237,0.22)"}
           pannable
           zoomable
@@ -223,7 +218,7 @@ function mapGraphToFlow(
   onQuickAddNode: (nodeId: string) => void,
 ) {
   const nodes: Array<Node<WorkspaceNodeData>> = graph.nodes.map((node) => {
-    const rank = getRankDefinition(node.rank);
+    const rank = getRankDefinition(node.type);
     const isSelected = selectedNodeId === node.id;
     const isHighlighted =
       highlighted.nodeIds.size === 0 ? true : highlighted.nodeIds.has(node.id);
@@ -232,20 +227,19 @@ function mapGraphToFlow(
       id: node.id,
       type: "qonyNode",
       position: {
-        x: Number.isFinite(node.position.x) ? node.position.x : getColumnX(node.rank),
+        x: Number.isFinite(node.position.x) ? node.position.x : getColumnX(node.type),
         y: Number.isFinite(node.position.y) ? node.position.y : 0,
       },
       sourcePosition: Position.Right,
       targetPosition: Position.Left,
       selected: isSelected,
       data: {
-        canCreateChild: getNextRank(node.rank) !== null,
-        content: node.content ?? null,
+        canCreateChild: true,
+        description: node.description ?? null,
         highlighted: isHighlighted,
-        kind: node.kind,
         onInspectNode: (nodeId: string) => onInspectNode(nodeId),
         onQuickAddNode,
-        rank: node.rank,
+        type: node.type,
         source: node.source,
         title: node.title,
       },
@@ -297,7 +291,7 @@ function WorkspaceNode({
   data,
   selected,
 }: NodeProps<Node<WorkspaceNodeData>>) {
-  const rank = getRankDefinition(data.rank);
+  const rank = getRankDefinition(data.type);
 
   return (
     <div
@@ -329,10 +323,10 @@ function WorkspaceNode({
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-white/42">
-            Rank {data.rank}
+            {rank.shortTitle}
           </p>
           <p className="mt-2 text-xs font-semibold uppercase tracking-[0.16em] text-white/56">
-            {rank.shortTitle}
+            {data.type.replaceAll("_", " ")}
           </p>
         </div>
         <span
@@ -350,12 +344,12 @@ function WorkspaceNode({
         {data.title}
       </h3>
       <p className="mt-3 text-sm leading-6 text-white/56">
-        {truncate(data.content ?? "Add content to deepen this node.", 130)}
+        {truncate(data.description ?? "Add content to deepen this node.", 130)}
       </p>
 
       <div className="mt-4 flex items-center justify-between gap-3">
         <p className="text-[11px] uppercase tracking-[0.16em] text-white/36">
-          {data.kind.replaceAll("-", " ")}
+          {data.type.replaceAll("_", " ")}
         </p>
         <div
           className="h-px flex-1"
@@ -399,23 +393,28 @@ function WorkspaceNode({
 
 function LaneOverlay() {
   return (
-    <div className="pointer-events-none absolute inset-0 z-0 hidden grid-cols-6 lg:grid">
-      {orderedRanks.map((rank) => {
-        const definition = getRankDefinition(rank);
+    <div
+      className="pointer-events-none absolute inset-0 z-0 hidden lg:grid"
+      style={{
+        gridTemplateColumns: `repeat(${orderedRanks.length}, minmax(240px, 1fr))`,
+      }}
+    >
+      {orderedRanks.map((type) => {
+        const definition = getRankDefinition(type);
         return (
           <div
             className="border-r border-emerald-200/10 px-4 pt-4"
-            key={rank}
+            key={type}
             style={{
               background: `linear-gradient(180deg, color-mix(in srgb, ${definition.accent} 10%, transparent), transparent 22%)`,
             }}
           >
             <div className="rounded-2xl border border-emerald-200/10 bg-[#08392d]/76 px-3 py-2 shadow-[0_10px_24px_rgba(0,0,0,0.14)] backdrop-blur-xl">
               <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-white/42">
-                Rank {definition.rank}
+                {definition.shortTitle}
               </p>
               <p className="mt-1 text-xs font-semibold text-white/72">
-                {definition.shortTitle}
+                {definition.title}
               </p>
             </div>
           </div>

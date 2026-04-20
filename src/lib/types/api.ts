@@ -1,7 +1,62 @@
 export type ProjectStatus = "draft" | "active" | "archived";
-export type NodeSource = "manual" | "ingest" | "ai";
+export type NodeSource = "document" | "web" | "user";
 export type MutationActor = "user" | "ai";
-export type NodeRank = 1 | 2 | 3 | 4 | 5 | 6;
+
+export type NodeType =
+  | "problem"
+  | "solution"
+  | "assumption"
+  | "metric"
+  | "stakeholder"
+  | "risk"
+  | "opportunity"
+  | "constraint"
+  | "evidence"
+  | "market_data"
+  | "trend"
+  | "competitor"
+  | "regulation"
+  | "objective"
+  | "resource";
+
+export type EdgeRelationType =
+  | "causes"
+  | "supports"
+  | "contradicts"
+  | "requires"
+  | "affects"
+  | "related_to"
+  | "measured_by"
+  | "mitigated_by";
+
+export const NODE_TYPES: readonly NodeType[] = [
+  "problem",
+  "solution",
+  "assumption",
+  "metric",
+  "stakeholder",
+  "risk",
+  "opportunity",
+  "constraint",
+  "evidence",
+  "market_data",
+  "trend",
+  "competitor",
+  "regulation",
+  "objective",
+  "resource",
+] as const;
+
+export const EDGE_RELATION_TYPES: readonly EdgeRelationType[] = [
+  "causes",
+  "supports",
+  "contradicts",
+  "requires",
+  "affects",
+  "related_to",
+  "measured_by",
+  "mitigated_by",
+] as const;
 
 export interface ResponseMeta {
   request_id?: string | null;
@@ -45,11 +100,13 @@ export interface GraphValidationSummary {
 
 export interface GraphNode {
   id: string;
-  rank: NodeRank;
-  kind: string;
+  type: NodeType;
   title: string;
-  content?: string | null;
+  description: string;
   source: NodeSource;
+  is_enrichment: boolean;
+  source_url?: string | null;
+  confidence: number;
   position: Position;
   metadata: Record<string, unknown>;
   created_at: string;
@@ -58,6 +115,7 @@ export interface GraphNode {
 
 export interface GraphEdge {
   id: string;
+  type: EdgeRelationType;
   source: string;
   target: string;
   label?: string | null;
@@ -193,42 +251,35 @@ export interface IngestPayload {
   graph: WorkspaceGraph;
 }
 
-export interface ExportStep {
-  node_id: string;
-  rank: NodeRank;
-  kind: string;
-  title: string;
-  content?: string | null;
-}
-
-export interface ExportChain {
-  chain_id: string;
-  steps: ExportStep[];
-}
+export type DeliverableType = "pitch_deck" | "business_document";
 
 export interface ExportPreviewPayload {
   snapshot_id: string;
   project_id: string;
   workspace_id: string;
   generated_at: string;
-  branch_count: number;
-  chains: ExportChain[];
-  narrative?: string | null;
+  graph_version?: number | null;
+  deliverable_type?: DeliverableType | null;
+  status: "stub";
   warnings: string[];
 }
 
 export interface NodeDraft {
   id?: string;
-  rank: NodeRank;
+  type: NodeType;
   title: string;
-  content?: string | null;
+  description: string;
   source?: NodeSource;
+  is_enrichment?: boolean;
+  source_url?: string | null;
+  confidence?: number;
   position?: Position;
   metadata?: Record<string, unknown>;
 }
 
 export interface EdgeDraft {
   id?: string;
+  type: EdgeRelationType;
   source: string;
   target: string;
   label?: string | null;
@@ -243,10 +294,13 @@ export interface AddNodeCommand {
 export interface UpdateNodeCommand {
   type: "update_node";
   node_id: string;
-  rank?: NodeRank;
+  node_type?: NodeType;
   title?: string;
-  content?: string | null;
+  description?: string;
   source?: NodeSource;
+  is_enrichment?: boolean;
+  source_url?: string | null;
+  confidence?: number;
   position?: Position;
   metadata?: Record<string, unknown>;
   merge_metadata?: boolean;
@@ -272,8 +326,7 @@ export interface DeleteEdgeCommand {
 export interface MoveNodeCommand {
   type: "move_node";
   node_id: string;
-  position?: Position;
-  rank?: NodeRank;
+  position: Position;
 }
 
 export type PatchCommand =

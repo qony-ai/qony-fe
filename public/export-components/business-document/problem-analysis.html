@@ -1,0 +1,14 @@
+<section class="section section-problem-analysis">
+  <h1>{{title}}</h1>
+  <div class="body">{{body}}</div>
+  {{#if evidence}}
+  <aside class="evidence">
+    <h2>Evidence</h2>
+    <ul>
+      {{#each evidence}}
+      <li>{{this}}</li>
+      {{/each}}
+    </ul>
+  </aside>
+  {{/if}}
+</section>

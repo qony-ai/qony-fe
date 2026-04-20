@@ -12,6 +12,7 @@ import { browserApi } from "@/src/lib/api/client";
 import type { AuthSession } from "@/src/lib/auth/types";
 import type { IngestPayload, ProjectSummary } from "@/src/lib/types/api";
 import { truncate } from "@/src/lib/utils";
+import { getRankDefinition } from "@/src/lib/workspace/ranks";
 
 interface IngestClientProps {
   projects: ProjectSummary[];
@@ -319,13 +320,13 @@ export function IngestClient({
                       key={node.id}
                     >
                       <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-white/42">
-                        Rank {node.rank}
+                        {getRankDefinition(node.type).shortTitle}
                       </p>
                       <p className="mt-2 text-sm font-semibold text-white">
                         {node.title}
                       </p>
                       <p className="mt-2 text-sm leading-6 text-white/56">
-                        {truncate(node.content ?? "No content", 120)}
+                        {truncate(node.description || "No content", 120)}
                       </p>
                     </div>
                   ))}

@@ -1,6 +1,12 @@
 import dagre from "dagre";
 
-import type { GraphEdge, GraphNode, NodeRank, WorkspaceGraph } from "@/src/lib/types/api";
+import type {
+  GraphEdge,
+  GraphNode,
+  NodeType,
+  WorkspaceGraph,
+} from "@/src/lib/types/api";
+import { orderedRanks } from "@/src/lib/workspace/ranks";
 
 export const graphNodeWidth = 256;
 export const graphNodeHeight = 168;
@@ -9,16 +15,21 @@ export const graphRowGap = 220;
 export const graphSnapSize = 24;
 export const graphNodeVerticalGap = 72;
 
-export function getColumnX(rank: NodeRank) {
-  return (rank - 1) * graphColumnWidth;
+const columnIndexByType = new Map<NodeType, number>(
+  orderedRanks.map((type, index) => [type, index]),
+);
+
+export function getColumnX(type: NodeType) {
+  const index = columnIndexByType.get(type) ?? 0;
+  return index * graphColumnWidth;
 }
 
 export function snapNodePosition(
-  rank: NodeRank,
+  type: NodeType,
   position: { x: number; y: number },
 ) {
   return {
-    x: getColumnX(rank),
+    x: getColumnX(type),
     y: Math.round(position.y / graphSnapSize) * graphSnapSize,
   };
 }
@@ -46,7 +57,6 @@ export function autoLayoutGraph(nodes: GraphNode[], edges: GraphEdge[]) {
     graph.setNode(node.id, {
       width: graphNodeWidth,
       height: graphNodeHeight,
-      rank: node.rank,
     });
   });
 
@@ -56,13 +66,13 @@ export function autoLayoutGraph(nodes: GraphNode[], edges: GraphEdge[]) {
 
   dagre.layout(graph);
 
-  const preferredByRank = new Map<
-    NodeRank,
+  const preferredByType = new Map<
+    NodeType,
     Array<{
       branchIndex: number;
       id: string;
       preferredY: number;
-      rank: NodeRank;
+      type: NodeType;
     }>
   >();
 
@@ -73,19 +83,19 @@ export function autoLayoutGraph(nodes: GraphNode[], edges: GraphEdge[]) {
       ? dagreNode.y - graphNodeHeight / 2
       : fallbackY;
 
-    const entries = preferredByRank.get(node.rank) ?? [];
+    const entries = preferredByType.get(node.type) ?? [];
     entries.push({
       branchIndex: readBranchIndex(node.metadata.branch_index),
       id: node.id,
       preferredY,
-      rank: node.rank,
+      type: node.type,
     });
-    preferredByRank.set(node.rank, entries);
+    preferredByType.set(node.type, entries);
   });
 
   const layout = new Map<string, { x: number; y: number }>();
 
-  preferredByRank.forEach((entries, rank) => {
+  preferredByType.forEach((entries, type) => {
     const sortedEntries = entries.toSorted((left, right) => {
       if (left.preferredY !== right.preferredY) {
         return left.preferredY - right.preferredY;
@@ -100,8 +110,8 @@ export function autoLayoutGraph(nodes: GraphNode[], edges: GraphEdge[]) {
 
     sortedEntries.forEach((entry) => {
       const resolvedY = Math.max(entry.preferredY, nextAvailableY);
-      const snapped = snapNodePosition(rank, {
-        x: getColumnX(rank),
+      const snapped = snapNodePosition(type, {
+        x: getColumnX(type),
         y: resolvedY,
       });
 
@@ -168,15 +178,15 @@ export function getHighlightedBranch(
 export function getSuggestedChildPosition({
   parent,
   siblings,
-  rank,
+  type,
 }: {
   parent: GraphNode | null;
   siblings: GraphNode[];
-  rank: NodeRank;
+  type: NodeType;
 }) {
   if (!parent) {
     return {
-      x: getColumnX(rank),
+      x: getColumnX(type),
       y: 0,
     };
   }
@@ -187,7 +197,7 @@ export function getSuggestedChildPosition({
       : parent.position.y;
 
   return {
-    x: getColumnX(rank),
+    x: getColumnX(type),
     y: Math.max(0, nextY),
   };
 }

@@ -29,6 +29,8 @@ import { browserApi } from "@/src/lib/api/client";
 import type {
   AddEdgeCommand,
   AddNodeCommand,
+  GraphNode,
+  NodeType,
   Position,
   UpdateNodeCommand,
   WorkspaceChatMessage,
@@ -46,7 +48,25 @@ import {
   resolveFrameworkRecommendationContext,
   type FrameworkSuggestion,
 } from "@/src/lib/workspace/frameworks";
-import { getNextRank, getRankDefinition } from "@/src/lib/workspace/ranks";
+import { getRankDefinition } from "@/src/lib/workspace/ranks";
+
+function deriveChildType(parent: GraphNode | null): NodeType {
+  if (!parent) {
+    return "problem";
+  }
+  switch (parent.type) {
+    case "problem":
+      return "assumption";
+    case "assumption":
+      return "solution";
+    case "solution":
+      return "evidence";
+    case "evidence":
+      return "objective";
+    default:
+      return "assumption";
+  }
+}
 
 const WorkspaceGraph = dynamic(
   () =>
@@ -82,14 +102,12 @@ export function WorkspaceClient({ initialWorkspace }: WorkspaceClientProps) {
   );
   const [nodeTitle, setNodeTitle] = useState(initialSelectedNode?.title ?? "");
   const [nodeContent, setNodeContent] = useState(
-    initialSelectedNode?.content ?? "",
+    initialSelectedNode?.description ?? "",
   );
   const [newNodeTitle, setNewNodeTitle] = useState("");
   const [newNodeContent, setNewNodeContent] = useState("");
   const [parentNodeId, setParentNodeId] = useState<string>(
-    initialSelectedNode && getNextRank(initialSelectedNode.rank)
-      ? initialSelectedNode.id
-      : "",
+    initialSelectedNode ? initialSelectedNode.id : "",
   );
   const [edgeSource, setEdgeSource] = useState("");
   const [edgeTarget, setEdgeTarget] = useState("");
@@ -113,27 +131,24 @@ export function WorkspaceClient({ initialWorkspace }: WorkspaceClientProps) {
   );
   const selectedNode = selectedNodeId ? nodeMap.get(selectedNodeId) ?? null : null;
   const rootNodes = useMemo(
-    () => nodes.filter((node) => node.rank === 1),
+    () => nodes.filter((node) => node.type === "problem"),
     [nodes],
   );
   const rootNode = useMemo(
-    () => nodes.find((node) => node.rank === 1) ?? nodes[0] ?? null,
+    () => nodes.find((node) => node.type === "problem") ?? nodes[0] ?? null,
     [nodes],
   );
   const parentNode = parentNodeId ? nodeMap.get(parentNodeId) ?? null : null;
-  const nextRank = parentNode ? getNextRank(parentNode.rank) : nodes.length === 0 ? 1 : null;
-  const childCandidates = useMemo(
-    () => nodes.filter((node) => getNextRank(node.rank) !== null),
-    [nodes],
-  );
+  const childType: NodeType = parentNode
+    ? deriveChildType(parentNode)
+    : nodes.length === 0
+      ? "problem"
+      : deriveChildType(null);
+  const canCreateChild = Boolean(parentNode) || nodes.length === 0;
+  const childCandidates = useMemo(() => nodes, [nodes]);
   const targetOptions = useMemo(() => {
     const sourceNode = edgeSource ? nodeMap.get(edgeSource) ?? null : null;
     if (!sourceNode) {
-      return [];
-    }
-
-    const allowedRank = getNextRank(sourceNode.rank);
-    if (!allowedRank) {
       return [];
     }
 
@@ -144,10 +159,7 @@ export function WorkspaceClient({ initialWorkspace }: WorkspaceClientProps) {
     );
 
     return nodes.filter(
-      (node) =>
-        node.id !== sourceNode.id &&
-        node.rank === allowedRank &&
-        !existingTargets.has(node.id),
+      (node) => node.id !== sourceNode.id && !existingTargets.has(node.id),
     );
   }, [edgeSource, edges, nodeMap, nodes]);
   const ingestMode =
@@ -156,7 +168,7 @@ export function WorkspaceClient({ initialWorkspace }: WorkspaceClientProps) {
       : null;
   const connectionHint = useMemo(() => {
     if (!edgeSource) {
-      return "Select a source node to constrain the target list to the next valid rank.";
+      return "Select a source node to start a connection.";
     }
 
     const sourceNode = nodeMap.get(edgeSource);
@@ -164,15 +176,10 @@ export function WorkspaceClient({ initialWorkspace }: WorkspaceClientProps) {
       return "The source node is no longer available.";
     }
 
-    const allowedRank = getNextRank(sourceNode.rank);
-    if (!allowedRank) {
-      return "Rank 6 nodes cannot create outgoing edges.";
-    }
-
-    return `This edge must end at Rank ${allowedRank} (${getRankDefinition(allowedRank).shortTitle}).`;
+    return `Pick any related node to connect from ${getRankDefinition(sourceNode.type).shortTitle}.`;
   }, [edgeSource, nodeMap]);
   const selectedRankDefinition = selectedNode
-    ? getRankDefinition(selectedNode.rank)
+    ? getRankDefinition(selectedNode.type)
     : null;
   const frameworkContext = useMemo(
     () => resolveFrameworkRecommendationContext(selectedNodeId, nodes, edges),
@@ -247,8 +254,8 @@ export function WorkspaceClient({ initialWorkspace }: WorkspaceClientProps) {
 
     setSelectedNodeId(nextNode?.id ?? null);
     setNodeTitle(nextNode?.title ?? "");
-    setNodeContent(nextNode?.content ?? "");
-    setParentNodeId(nextNode && getNextRank(nextNode.rank) ? nextNode.id : "");
+    setNodeContent(nextNode?.description ?? "");
+    setParentNodeId(nextNode ? nextNode.id : "");
   }
 
   function applyWorkspaceUpdate(nextWorkspace: WorkspacePayload) {
@@ -308,7 +315,7 @@ export function WorkspaceClient({ initialWorkspace }: WorkspaceClientProps) {
           type: "update_node",
           node_id: selectedNode.id,
           title: nodeTitle,
-          content: nodeContent,
+          description: nodeContent,
         },
       ],
       expected_version: workspace.graph.metadata.version,
@@ -338,32 +345,28 @@ export function WorkspaceClient({ initialWorkspace }: WorkspaceClientProps) {
       return;
     }
 
-    const rank = nextRank;
-    if (!rank) {
-      setError("This node already sits at Rank 6 and cannot create another child.");
-      return;
-    }
+    const type = childType;
 
     const siblings = parentNode
       ? nodes.filter(
           (node) =>
             readBranchIndex(node.metadata.branch_index) ===
               readBranchIndex(parentNode.metadata.branch_index) &&
-            node.rank === rank,
+            node.type === type,
         )
       : [];
     const newId = crypto.randomUUID();
     const position = getSuggestedChildPosition({
       parent: parentNode,
-      rank,
+      type,
       siblings,
     });
     const branchIndex = parentNode
-      ? parentNode.rank === 1
+      ? parentNode.type === "problem"
         ? Math.max(
             -1,
             ...nodes
-              .filter((node) => node.rank === rank)
+              .filter((node) => node.type === type)
               .map((node) => readBranchIndex(node.metadata.branch_index)),
           ) + 1
         : readBranchIndex(parentNode.metadata.branch_index)
@@ -374,10 +377,10 @@ export function WorkspaceClient({ initialWorkspace }: WorkspaceClientProps) {
         type: "add_node",
         node: {
           id: newId,
-          rank,
+          type,
           title: newNodeTitle.trim(),
-          content: newNodeContent.trim() || undefined,
-          source: "manual",
+          description: newNodeContent.trim(),
+          source: "user",
           position,
           metadata: {
             branch_index: branchIndex,
@@ -390,6 +393,7 @@ export function WorkspaceClient({ initialWorkspace }: WorkspaceClientProps) {
       commands.push({
         type: "add_edge",
         edge: {
+          type: "related_to",
           source: parentNode.id,
           target: newId,
         },
@@ -419,17 +423,16 @@ export function WorkspaceClient({ initialWorkspace }: WorkspaceClientProps) {
       return;
     }
 
-    if (target.rank !== source.rank + 1) {
-      setError(`Rank ${source.rank} can only connect to Rank ${source.rank + 1}.`);
-      return;
-    }
-
     submitMutation({
       actor: "user",
       commands: [
         {
           type: "add_edge",
-          edge: connection,
+          edge: {
+            type: "related_to",
+            source: connection.source,
+            target: connection.target,
+          },
         },
       ],
       expected_version: workspace.graph.metadata.version,
@@ -585,7 +588,7 @@ export function WorkspaceClient({ initialWorkspace }: WorkspaceClientProps) {
       return;
     }
 
-    if (selectedNode?.rank === 4) {
+    if (selectedNode?.type === "solution") {
       submitMutation(
         {
           actor: "ai",
@@ -594,8 +597,8 @@ export function WorkspaceClient({ initialWorkspace }: WorkspaceClientProps) {
               type: "update_node",
               node_id: selectedNode.id,
               title: suggestion.title,
-              content: suggestion.content,
-              source: "ai",
+              description: suggestion.content,
+              source: "user",
               metadata: {
                 framework_key: suggestion.id,
                 recommended_for: frameworkContext.anchorNode.id,
@@ -617,7 +620,7 @@ export function WorkspaceClient({ initialWorkspace }: WorkspaceClientProps) {
     const newNodeId = crypto.randomUUID();
     const siblings = nodes.filter(
       (node) =>
-        node.rank === 4 &&
+        node.type === "solution" &&
         readBranchIndex(node.metadata.branch_index) ===
           readBranchIndex(frameworkContext.anchorNode.metadata.branch_index),
     );
@@ -630,13 +633,13 @@ export function WorkspaceClient({ initialWorkspace }: WorkspaceClientProps) {
             type: "add_node",
             node: {
               id: newNodeId,
-              rank: 4,
+              type: "solution",
               title: suggestion.title,
-              content: suggestion.content,
-              source: "ai",
+              description: suggestion.content,
+              source: "user",
               position: getSuggestedChildPosition({
                 parent: frameworkContext.anchorNode,
-                rank: 4,
+                type: "solution",
                 siblings,
               }),
               metadata: {
@@ -651,6 +654,7 @@ export function WorkspaceClient({ initialWorkspace }: WorkspaceClientProps) {
           {
             type: "add_edge",
             edge: {
+              type: "related_to",
               source: frameworkContext.anchorNode.id,
               target: newNodeId,
             },
@@ -698,7 +702,7 @@ export function WorkspaceClient({ initialWorkspace }: WorkspaceClientProps) {
                 </h1>
                 <p className="mt-4 text-sm leading-7 text-white/58">
                   This workspace is now a full-screen structured canvas. Add the
-                  first Rank 1 node from the rail on the right, or ingest source
+                  first problem node from the rail on the right, or ingest source
                   material before you start editing.
                 </p>
                 <div className="mt-6 flex flex-wrap justify-center gap-3">
@@ -820,7 +824,7 @@ export function WorkspaceClient({ initialWorkspace }: WorkspaceClientProps) {
                 <SidebarSection title="Validation">
                   {validation.is_valid ? (
                     <div className="rounded-2xl border border-emerald-300/18 bg-emerald-300/10 px-4 py-3 text-sm leading-6 text-emerald-50">
-                      The DAG is structurally valid. Complete branches can be exported once they reach Rank 6.
+                      The graph is structurally valid. Connect more nodes to deepen the branch before exporting.
                     </div>
                   ) : (
                     <div className="grid gap-3">
@@ -833,7 +837,7 @@ export function WorkspaceClient({ initialWorkspace }: WorkspaceClientProps) {
                           ? nodeMap.get(issue.node_id) ?? null
                           : null;
                         const canJumpToNode = Boolean(linkedNode);
-                        const isMultipleRootIssue = issue.code === "multiple_roots";
+                        const hasMultipleRoots = rootNodes.length > 1;
 
                         return (
                           <div
@@ -844,11 +848,11 @@ export function WorkspaceClient({ initialWorkspace }: WorkspaceClientProps) {
                             <p className="mt-2 text-xs leading-5 text-white/58">
                               {linkedNode
                                 ? `Linked node: ${linkedNode.title}`
-                                : isMultipleRootIssue
-                                  ? `Current roots: ${rootNodes.map((node) => truncate(node.title, 24)).join(" • ")}`
+                                : hasMultipleRoots
+                                  ? `Current problem nodes: ${rootNodes.map((node) => truncate(node.title, 24)).join(" • ")}`
                                   : issue.edge_id
                                     ? `Edge reference: ${issue.edge_id}`
-                                    : "Review the graph and restore a single connected Rank 1 to Rank 6 structure."}
+                                    : "Review the graph and reconnect any orphaned nodes."}
                             </p>
                             {canJumpToNode ? (
                               <Button
@@ -877,7 +881,7 @@ export function WorkspaceClient({ initialWorkspace }: WorkspaceClientProps) {
                         <div className="flex items-center justify-between gap-3">
                           <div>
                             <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-white/40">
-                              Rank {selectedNode.rank}
+                              {selectedRankDefinition?.shortTitle}
                             </p>
                             <p className="mt-2 text-sm font-semibold text-white">
                               {selectedRankDefinition?.title}
@@ -948,11 +952,11 @@ export function WorkspaceClient({ initialWorkspace }: WorkspaceClientProps) {
                               {frameworkContext.anchorNode.title}
                             </p>
                           </div>
-                          <Badge tone="success">Rank 4</Badge>
+                          <Badge tone="success">Solution</Badge>
                         </div>
                         <p className="mt-2 text-xs leading-5 text-white/58">
                           Suggestions are generated from the closest hypothesis in the
-                          selected branch so the framework stays aligned to the DAG.
+                          selected branch so the framework stays aligned to the graph.
                         </p>
                       </div>
 
@@ -1010,7 +1014,7 @@ export function WorkspaceClient({ initialWorkspace }: WorkspaceClientProps) {
                             onClick={() => handleApplyFrameworkSuggestion(suggestion)}
                           >
                             <Sparkles className="size-4" />
-                            {selectedNode?.rank === 4
+                            {selectedNode?.type === "solution"
                               ? "Apply to selected framework"
                               : "Add framework to branch"}
                           </Button>
@@ -1019,8 +1023,8 @@ export function WorkspaceClient({ initialWorkspace }: WorkspaceClientProps) {
                     </div>
                   ) : (
                     <div className="rounded-2xl border border-dashed border-emerald-200/12 bg-emerald-300/5 px-4 py-6 text-sm leading-6 text-white/58">
-                      AI framework suggestions unlock after you add or select a
-                      Rank 3 hypothesis branch.
+                      AI framework suggestions unlock after you add or select an
+                      assumption node in a branch.
                     </div>
                   )}
                 </SidebarSection>
@@ -1030,16 +1034,14 @@ export function WorkspaceClient({ initialWorkspace }: WorkspaceClientProps) {
                     <div className="grid min-w-0 gap-2 rounded-2xl border border-emerald-200/10 bg-emerald-300/6 p-3">
                       <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
                         <FieldLabel>Parent</FieldLabel>
-                        {nextRank ? (
-                          <Badge tone="subtle">Rank {nextRank}</Badge>
-                        ) : null}
+                        <Badge tone="subtle">{getRankDefinition(childType).shortTitle}</Badge>
                       </div>
                       <NodeSummaryCard
                         body={
                           parentNode
-                            ? `Child will be created under Rank ${parentNode.rank}.`
+                            ? `Child will be created under ${getRankDefinition(parentNode.type).shortTitle}.`
                             : nodes.length === 0
-                              ? "A root node will be created at Rank 1."
+                              ? "A problem node will anchor the new workspace."
                               : "Choose which existing node should own the next step."
                         }
                         title={
@@ -1051,7 +1053,7 @@ export function WorkspaceClient({ initialWorkspace }: WorkspaceClientProps) {
                         }
                         tone={parentNode ? "active" : "default"}
                       />
-                      {selectedNode && getNextRank(selectedNode.rank) ? (
+                      {selectedNode ? (
                         <button
                           className="w-full min-w-0 whitespace-normal break-words rounded-xl border border-emerald-200/10 bg-[#083327]/72 px-3 py-2 text-left text-xs leading-5 text-white/66 transition hover:bg-emerald-300/10 hover:text-white"
                           onClick={() => setParentNodeId(selectedNode.id)}
@@ -1074,16 +1076,14 @@ export function WorkspaceClient({ initialWorkspace }: WorkspaceClientProps) {
                         </option>
                         {childCandidates.map((node) => (
                           <option className="bg-[#08392d]" key={node.id} value={node.id}>
-                            {node.title} · Rank {node.rank}
+                            {node.title} · {getRankDefinition(node.type).shortTitle}
                           </option>
                         ))}
                       </select>
                     </div>
 
                     <div className="min-w-0 rounded-2xl border border-emerald-200/10 bg-[#083327]/72 px-3 py-2.5 text-xs leading-5 break-words text-white/62">
-                      {nextRank
-                        ? `The new node will be created at Rank ${nextRank} (${getRankDefinition(nextRank).shortTitle}).`
-                        : "Rank 6 nodes cannot create additional children."}
+                      {`The new node will be created as ${getRankDefinition(childType).shortTitle}.`}
                     </div>
 
                     <div className="grid gap-2">
@@ -1108,7 +1108,7 @@ export function WorkspaceClient({ initialWorkspace }: WorkspaceClientProps) {
 
                     <Button
                       className="w-full"
-                      disabled={isPending || !nextRank || newNodeTitle.trim().length < 3}
+                      disabled={isPending || !canCreateChild || newNodeTitle.trim().length < 3}
                       onClick={handleAddNode}
                     >
                       <Plus className="size-4" />
@@ -1132,7 +1132,7 @@ export function WorkspaceClient({ initialWorkspace }: WorkspaceClientProps) {
                         body={
                           edgeSource
                             ? connectionHint
-                            : "Pick a source node first, then choose a valid target in the next rank."
+                            : "Pick a source node first, then choose a target to link."
                         }
                         title={
                           edgeSource
@@ -1141,7 +1141,7 @@ export function WorkspaceClient({ initialWorkspace }: WorkspaceClientProps) {
                         }
                         tone={edgeSource ? "active" : "default"}
                       />
-                      {selectedNode && getNextRank(selectedNode.rank) ? (
+                      {selectedNode ? (
                         <button
                           className="w-full min-w-0 whitespace-normal break-words rounded-xl border border-emerald-200/10 bg-[#083327]/72 px-3 py-2 text-left text-xs leading-5 text-white/66 transition hover:bg-emerald-300/10 hover:text-white"
                           onClick={() => {
@@ -1170,7 +1170,7 @@ export function WorkspaceClient({ initialWorkspace }: WorkspaceClientProps) {
                         </option>
                         {childCandidates.map((node) => (
                           <option className="bg-[#08392d]" key={node.id} value={node.id}>
-                            {node.title} · Rank {node.rank}
+                            {node.title} · {getRankDefinition(node.type).shortTitle}
                           </option>
                         ))}
                       </select>
@@ -1188,7 +1188,7 @@ export function WorkspaceClient({ initialWorkspace }: WorkspaceClientProps) {
                         </option>
                         {targetOptions.map((node) => (
                           <option className="bg-[#08392d]" key={node.id} value={node.id}>
-                            {node.title} · Rank {node.rank}
+                            {node.title} · {getRankDefinition(node.type).shortTitle}
                           </option>
                         ))}
                       </select>

@@ -55,11 +55,11 @@ export function ProjectDetailClient({
 
   const rankSummary = useMemo(
     () =>
-      orderedRanks.map((rank) => {
-        const definition = getRankDefinition(rank);
+      orderedRanks.map((type) => {
+        const definition = getRankDefinition(type);
         return {
           ...definition,
-          count: initialWorkspace.graph.nodes.filter((node) => node.rank === rank).length,
+          count: initialWorkspace.graph.nodes.filter((node) => node.type === type).length,
         };
       }),
     [initialWorkspace.graph.nodes],
@@ -77,8 +77,8 @@ export function ProjectDetailClient({
       detail: `${initialWorkspace.graph.edges.length} edges across the current canvas`,
     },
     {
-      label: "Complete branches",
-      value: String(initialWorkspace.graph.metadata.validation.complete_branch_count),
+      label: "Reachable nodes",
+      value: String(initialWorkspace.graph.metadata.validation.reachable_node_count),
       detail: initialWorkspace.graph.metadata.validation.is_valid
         ? "Structure is currently valid."
         : `${initialWorkspace.graph.metadata.validation.issues.length} validation issues need review`,
@@ -288,8 +288,8 @@ export function ProjectDetailClient({
                   {initialWorkspace.graph.metadata.validation.is_valid ? "Canvas ready" : "Needs review"}
                 </Badge>
                 {initialPreview ? (
-                  <Badge tone={initialPreview.branch_count > 0 ? "success" : "subtle"}>
-                    {initialPreview.branch_count} exportable branches
+                  <Badge tone={initialPreview.warnings.length === 0 ? "success" : "subtle"}>
+                    {initialPreview.status === "stub" ? "Preview stub" : "Preview ready"}
                   </Badge>
                 ) : null}
               </div>
@@ -317,17 +317,17 @@ export function ProjectDetailClient({
               {rankSummary.map((rank) => (
                 <div
                   className="rounded-[24px] border p-4"
-                  key={rank.rank}
+                  key={rank.type}
                   style={{
                     background: rank.surface,
                     borderColor: rank.border,
                   }}
                 >
                   <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-white/44">
-                    Rank {rank.rank}
+                    {rank.shortTitle}
                   </p>
                   <p className="mt-3 text-lg font-semibold text-white">
-                    {rank.shortTitle}
+                    {rank.title}
                   </p>
                   <p className="mt-2 text-3xl font-semibold tracking-[-0.05em] text-white">
                     {rank.count}

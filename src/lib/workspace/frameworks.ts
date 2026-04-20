@@ -1,5 +1,8 @@
 import type { GraphEdge, GraphNode } from "@/src/lib/types/api";
 
+const ANCHOR_TYPE = "assumption";
+const FRAMEWORK_TYPE = "solution";
+
 export interface FrameworkDefinition {
   id: string;
   title: string;
@@ -183,9 +186,9 @@ function buildAdjacency(edges: GraphEdge[]) {
   return { incoming, outgoing };
 }
 
-function findClosestConnectedNodeAtRank(
+function findClosestConnectedNodeOfType(
   startNode: GraphNode,
-  targetRank: number,
+  targetType: GraphNode["type"],
   nodeMap: Map<string, GraphNode>,
   adjacency: Map<string, string[]>,
 ) {
@@ -204,7 +207,7 @@ function findClosestConnectedNodeAtRank(
       continue;
     }
 
-    if (candidate.rank === targetRank) {
+    if (candidate.type === targetType) {
       return candidate;
     }
 
@@ -267,28 +270,37 @@ export function resolveFrameworkRecommendationContext(
   const { incoming, outgoing } = buildAdjacency(edges);
   const selectedNode = selectedNodeId ? nodeMap.get(selectedNodeId) ?? null : null;
 
-  let anchorNode =
-    selectedNode?.rank === 3
+  let anchorNode: GraphNode | null =
+    selectedNode?.type === ANCHOR_TYPE
       ? selectedNode
       : selectedNode
-        ? selectedNode.rank < 3
-          ? findClosestConnectedNodeAtRank(selectedNode, 3, nodeMap, outgoing)
-          : findClosestConnectedNodeAtRank(selectedNode, 3, nodeMap, incoming)
+        ? findClosestConnectedNodeOfType(
+            selectedNode,
+            ANCHOR_TYPE,
+            nodeMap,
+            outgoing,
+          ) ??
+          findClosestConnectedNodeOfType(
+            selectedNode,
+            ANCHOR_TYPE,
+            nodeMap,
+            incoming,
+          )
         : null;
 
-  anchorNode ??= nodes.find((node) => node.rank === 3) ?? null;
+  anchorNode ??= nodes.find((node) => node.type === ANCHOR_TYPE) ?? null;
 
   if (!anchorNode) {
     return null;
   }
 
   let existingFrameworkNode: GraphNode | null =
-    selectedNode?.rank === 4 ? selectedNode : null;
+    selectedNode?.type === FRAMEWORK_TYPE ? selectedNode : null;
 
-  if (!existingFrameworkNode && selectedNode && selectedNode.rank > 4) {
-    existingFrameworkNode = findClosestConnectedNodeAtRank(
+  if (!existingFrameworkNode && selectedNode) {
+    existingFrameworkNode = findClosestConnectedNodeOfType(
       selectedNode,
-      4,
+      FRAMEWORK_TYPE,
       nodeMap,
       incoming,
     );
@@ -297,7 +309,7 @@ export function resolveFrameworkRecommendationContext(
   if (!existingFrameworkNode) {
     const directFrameworkId = (outgoing.get(anchorNode.id) ?? []).find((nodeId) => {
       const node = nodeMap.get(nodeId);
-      return node?.rank === 4;
+      return node?.type === FRAMEWORK_TYPE;
     });
     existingFrameworkNode = directFrameworkId
       ? nodeMap.get(directFrameworkId) ?? null
@@ -311,7 +323,7 @@ export function resolveFrameworkRecommendationContext(
 }
 
 export function getFrameworkSuggestions(anchorNode: GraphNode) {
-  const branchText = `${anchorNode.title} ${anchorNode.content ?? ""}`.toLowerCase();
+  const branchText = `${anchorNode.title} ${anchorNode.description ?? ""}`.toLowerCase();
   return frameworkLibrary
     .map((framework) => ({
       framework,

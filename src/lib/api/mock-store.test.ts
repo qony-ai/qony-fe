@@ -48,7 +48,7 @@ test("mockIngestProject replaces workspace graph with extracted structure", asyn
 test("mock export preview reflects the current workspace graph", async () => {
   const response = await mockGetExportPreview("case-retail-revenue");
 
-  assert.ok(response.data.chains.length >= 1);
+  assert.equal(response.data.status, "stub");
   assert.equal(response.data.warnings.length, 0);
   assert.equal(response.data.project_id, "case-retail-revenue");
 });
@@ -90,7 +90,7 @@ test("mockIngestProject preserves the current graph when replace_existing is fal
   assert.equal(after.graph.metadata.validation.is_valid, true);
 });
 
-test("mock export preview blocks invalid graphs from counting branches", async () => {
+test("mock export preview warns when graph validation fails", async () => {
   await mockMutateWorkspace({
     project_id: "case-retail-revenue",
     expected_version: 1,
@@ -106,37 +106,10 @@ test("mock export preview blocks invalid graphs from counting branches", async (
   const preview = await mockGetExportPreview("case-retail-revenue");
 
   assert.equal(workspace.graph.metadata.validation.is_valid, false);
-  assert.equal(workspace.graph.metadata.validation.complete_branch_count, 0);
-  assert.equal(preview.data.branch_count, 0);
+  assert.equal(preview.data.status, "stub");
   assert.match(
     preview.data.warnings[0] ?? "",
     /Resolve workspace validation issues before exporting/i,
-  );
-});
-
-test("mockMutateWorkspace enforces a single Rank 1 root", async () => {
-  await assert.rejects(
-    () =>
-      mockMutateWorkspace({
-        project_id: "case-retail-revenue",
-        expected_version: 1,
-        commands: [
-          {
-            type: "add_node",
-            node: {
-              id: "extra-root",
-              rank: 1,
-              title: "Second root",
-              content: "This should be rejected.",
-              source: "manual",
-            },
-          },
-        ],
-      }),
-    (error: unknown) =>
-      error instanceof QonyApiError &&
-      error.status === 422 &&
-      /only one rank 1 root/i.test(error.message),
   );
 });
 

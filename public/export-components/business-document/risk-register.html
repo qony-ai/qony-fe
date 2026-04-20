@@ -1,0 +1,17 @@
+<section class="section section-risk-register">
+  <h1>{{title}}</h1>
+  <table class="risks">
+    <thead>
+      <tr><th>Risk</th><th>Description</th><th>Mitigation</th></tr>
+    </thead>
+    <tbody>
+      {{#each risks}}
+      <tr>
+        <td class="risk-title">{{this.title}}</td>
+        <td class="risk-description">{{this.description}}</td>
+        <td class="risk-mitigation">{{#if this.mitigation}}{{this.mitigation}}{{else}}&mdash;{{/if}}</td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+</section>

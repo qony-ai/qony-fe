@@ -92,8 +92,8 @@ export function ExportPreviewView({
           <Panel className="rounded-[30px] p-5 md:p-6">
             <PanelHeader
               action={
-                <Badge tone={preview.branch_count > 0 ? "success" : "warning"}>
-                  {preview.branch_count} exportable branches
+                <Badge tone={preview.warnings.length > 0 ? "warning" : "success"}>
+                  {preview.status === "stub" ? "Preview stub" : "Preview ready"}
                 </Badge>
               }
               description="This central panel mirrors the final report composition: headline, narrative kicker, and the branch body."
@@ -115,7 +115,7 @@ export function ExportPreviewView({
                 </h2>
                 <p className="mt-6 whitespace-pre-wrap text-base leading-8 text-white/66 md:text-lg">
                   {activeSlide?.body ??
-                    "Use the workspace to build a full rank-1 through rank-6 branch, then return here to review the narrative output."}
+                    "Use the workspace to build out the typed graph, then return here to review the narrative output."}
                 </p>
               </div>
             </div>
@@ -130,8 +130,9 @@ export function ExportPreviewView({
               />
               <div className="mt-6 rounded-[24px] border border-emerald-200/10 bg-emerald-300/6 p-5">
                 <p className="text-sm leading-7 text-white/62">
-                  {preview.narrative ??
-                    "No narrative summary is available yet. Complete more branches to enrich the export story."}
+                  Narrative synthesis will appear here once the export pipeline
+                  is wired up. For now, this is a stub preview of the graph
+                  snapshot.
                 </p>
               </div>
             </Panel>
@@ -189,28 +190,25 @@ export function ExportPreviewView({
 }
 
 function buildSlides(preview: ExportPreviewPayload): PreviewSlide[] {
-  const baseSlides: PreviewSlide[] = [
+  const kickerParts = [
+    preview.status === "stub" ? "Preview stub" : "Preview ready",
+    formatDateTime(preview.generated_at),
+  ];
+  if (preview.graph_version != null) {
+    kickerParts.push(`Graph v${preview.graph_version}`);
+  }
+
+  return [
     {
       id: "overview",
-      kicker: `${preview.branch_count} complete branches • ${formatDateTime(preview.generated_at)}`,
+      kicker: kickerParts.join(" • "),
       title: "Report overview",
       body:
-        preview.narrative ??
-        "This preview will expand as the workspace accumulates complete branches and stronger synthesis.",
+        preview.warnings.length > 0
+          ? `Resolve the following before exporting:\n\n${preview.warnings
+              .map((warning) => `• ${warning}`)
+              .join("\n")}`
+          : "The export pipeline is currently a stub. Narrative synthesis will attach here once the backend deliverable service is connected.",
     },
   ];
-
-  const branchSlides = preview.chains.map((chain, index) => ({
-    id: chain.chain_id,
-    kicker: `Branch ${index + 1} • ${chain.steps.length} slides of logic`,
-    title: chain.steps[chain.steps.length - 1]?.title ?? `Branch ${index + 1}`,
-    body: chain.steps
-      .map(
-        (step) =>
-          `Rank ${step.rank} · ${step.kind.replaceAll("_", " ")}\n${step.title}\n${step.content ?? "No additional content."}`,
-      )
-      .join("\n\n"),
-  }));
-
-  return [...baseSlides, ...branchSlides];
 }

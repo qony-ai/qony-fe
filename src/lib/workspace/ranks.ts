@@ -1,83 +1,139 @@
-import type { NodeRank } from "@/src/lib/types/api";
+import type { NodeType } from "@/src/lib/types/api";
 
 export interface RankDefinition {
-  rank: NodeRank;
+  type: NodeType;
   title: string;
   shortTitle: string;
   description: string;
   accent: string;
   surface: string;
   border: string;
+  colorSlot: 1 | 2 | 3 | 4 | 5 | 6;
 }
+
+const colorSlot = (slot: 1 | 2 | 3 | 4 | 5 | 6) => ({
+  accent: `var(--rank-${slot}-accent)`,
+  surface: `var(--rank-${slot}-surface)`,
+  border: `var(--rank-${slot}-border)`,
+  colorSlot: slot,
+});
 
 export const rankDefinitions: RankDefinition[] = [
   {
-    rank: 1,
-    title: "Problem Statement",
+    type: "problem",
+    title: "Problem",
     shortTitle: "Problem",
-    description: "The root question that anchors the case.",
-    accent: "var(--rank-1-accent)",
-    surface: "var(--rank-1-surface)",
-    border: "var(--rank-1-border)",
+    description: "A gap, pain point, or unresolved question.",
+    ...colorSlot(1),
   },
   {
-    rank: 2,
-    title: "Sub-Problem",
-    shortTitle: "Sub-Problem",
-    description: "Resolvable branches of the main problem.",
-    accent: "var(--rank-2-accent)",
-    surface: "var(--rank-2-surface)",
-    border: "var(--rank-2-border)",
+    type: "risk",
+    title: "Risk",
+    shortTitle: "Risk",
+    description: "Something that could go wrong.",
+    ...colorSlot(1),
   },
   {
-    rank: 3,
-    title: "Hypothesis",
-    shortTitle: "Hypothesis",
-    description: "Working assumptions to validate or reject.",
-    accent: "var(--rank-3-accent)",
-    surface: "var(--rank-3-surface)",
-    border: "var(--rank-3-border)",
+    type: "constraint",
+    title: "Constraint",
+    shortTitle: "Constraint",
+    description: "A hard boundary that limits options.",
+    ...colorSlot(1),
   },
   {
-    rank: 4,
-    title: "Framework / Analysis",
-    shortTitle: "Framework",
-    description: "Structured analytical lens applied to the branch.",
-    accent: "var(--rank-4-accent)",
-    surface: "var(--rank-4-surface)",
-    border: "var(--rank-4-border)",
+    type: "regulation",
+    title: "Regulation",
+    shortTitle: "Regulation",
+    description: "External rules that shape what is possible.",
+    ...colorSlot(1),
   },
   {
-    rank: 5,
-    title: "Supporting Data / Evidence",
+    type: "stakeholder",
+    title: "Stakeholder",
+    shortTitle: "Stakeholder",
+    description: "A party whose interests affect the case.",
+    ...colorSlot(2),
+  },
+  {
+    type: "resource",
+    title: "Resource",
+    shortTitle: "Resource",
+    description: "An asset available to the case.",
+    ...colorSlot(2),
+  },
+  {
+    type: "competitor",
+    title: "Competitor",
+    shortTitle: "Competitor",
+    description: "A rival player in the landscape.",
+    ...colorSlot(2),
+  },
+  {
+    type: "assumption",
+    title: "Assumption",
+    shortTitle: "Assumption",
+    description: "A working belief to validate or reject.",
+    ...colorSlot(3),
+  },
+  {
+    type: "trend",
+    title: "Trend",
+    shortTitle: "Trend",
+    description: "A directional shift worth tracking.",
+    ...colorSlot(3),
+  },
+  {
+    type: "solution",
+    title: "Solution",
+    shortTitle: "Solution",
+    description: "A proposed response to a problem.",
+    ...colorSlot(4),
+  },
+  {
+    type: "opportunity",
+    title: "Opportunity",
+    shortTitle: "Opportunity",
+    description: "A favorable opening to pursue.",
+    ...colorSlot(4),
+  },
+  {
+    type: "evidence",
+    title: "Evidence",
     shortTitle: "Evidence",
-    description: "Quantitative or qualitative support.",
-    accent: "var(--rank-5-accent)",
-    surface: "var(--rank-5-surface)",
-    border: "var(--rank-5-border)",
+    description: "Support for or against a claim.",
+    ...colorSlot(5),
   },
   {
-    rank: 6,
-    title: "Synthesis",
-    shortTitle: "Synthesis",
-    description: "Decision-ready conclusion for the branch.",
-    accent: "var(--rank-6-accent)",
-    surface: "var(--rank-6-surface)",
-    border: "var(--rank-6-border)",
+    type: "market_data",
+    title: "Market data",
+    shortTitle: "Market data",
+    description: "Measured market signal.",
+    ...colorSlot(5),
+  },
+  {
+    type: "metric",
+    title: "Metric",
+    shortTitle: "Metric",
+    description: "A quantifiable indicator.",
+    ...colorSlot(5),
+  },
+  {
+    type: "objective",
+    title: "Objective",
+    shortTitle: "Objective",
+    description: "A target outcome or decision.",
+    ...colorSlot(6),
   },
 ];
 
-export const orderedRanks = rankDefinitions.map(
-  (definition) => definition.rank,
+export const orderedRanks: NodeType[] = rankDefinitions.map(
+  (definition) => definition.type,
 );
 
-export function getRankDefinition(rank: NodeRank) {
-  return (
-    rankDefinitions.find((definition) => definition.rank === rank) ??
-    rankDefinitions[0]
-  );
-}
+const rankDefinitionByType = new Map<NodeType, RankDefinition>(
+  rankDefinitions.map((definition) => [definition.type, definition]),
+);
 
-export function getNextRank(rank: NodeRank): NodeRank | null {
-  return rank < 6 ? ((rank + 1) as NodeRank) : null;
+export function getRankDefinition(type: NodeType): RankDefinition {
+  return rankDefinitionByType.get(type) ?? rankDefinitions[0];
 }

@@ -1,0 +1,12 @@
+<section class="section section-recommendation">
+  <h1>{{title}}</h1>
+  <div class="body">{{body}}</div>
+  {{#if next_steps}}
+  <h2>Next steps</h2>
+  <ol class="next-steps">
+    {{#each next_steps}}
+    <li>{{this}}</li>
+    {{/each}}
+  </ol>
+  {{/if}}
+</section>
