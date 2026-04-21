@@ -1,5 +1,8 @@
 import {
   type ApiResponse,
+  type DeliverableType,
+  type ExportJob,
+  type ExportJobCreateRequest,
   type ExportPreviewPayload,
   type IngestPayload,
   type IngestRequest,
@@ -68,6 +71,7 @@ function resolveBackendPath(path: string) {
     .replace("/api/qony/workspace/mutate", "/api/v1/workspace/mutate")
     .replace("/api/qony/workspace/chat", "/api/v1/workspace/chat")
     .replace("/api/qony/workspace", "/api/v1/workspace")
+    .replace("/api/qony/export/jobs", "/api/v1/export/jobs")
     .replace("/api/qony/export/preview", "/api/v1/export/preview");
 }
 
@@ -161,8 +165,65 @@ async function mockRequest<T>(
     path.startsWith("/api/qony/export/preview/") &&
     method === "GET"
   ) {
-    const projectId = path.replace("/api/qony/export/preview/", "");
-    return (await mockGetExportPreview(projectId)) as ApiResponse<T>;
+    const parsed = new URL(path, "http://localhost");
+    const projectId = parsed.pathname.replace("/api/qony/export/preview/", "");
+    const deliverableType =
+      (parsed.searchParams.get("deliverable_type") as DeliverableType | null) ??
+      "pitch_deck";
+    return (await mockGetExportPreview(
+      projectId,
+      deliverableType,
+    )) as ApiResponse<T>;
+  }
+  if (path === "/api/qony/export/jobs" && method === "POST") {
+    const payload = body as ExportJobCreateRequest;
+    const projectId = payload.project_id;
+    const preview = await mockGetExportPreview(projectId, payload.deliverable_type);
+    const jobId = `export-job__${projectId}__${payload.deliverable_type}`;
+    const exportJob: ExportJob = {
+      id: jobId,
+      project_id: projectId,
+      workspace_id: preview.data.workspace_id,
+      deliverable_type: payload.deliverable_type,
+      status: "completed",
+      graph_version_at_request: preview.data.graph_version ?? null,
+      manifest_version: preview.data.manifest_version ?? null,
+      slide_plan: preview.data.slide_plan ?? null,
+      warnings: preview.data.warnings,
+      html_artifact_path: null,
+      pdf_artifact_path: `/api/qony-export/jobs/${jobId}/pdf`,
+      error_message: null,
+      created_at: preview.data.generated_at,
+      updated_at: preview.data.generated_at,
+    };
+    return { data: exportJob } as ApiResponse<T>;
+  }
+  if (path.startsWith("/api/qony/export/jobs/") && method === "GET") {
+    const jobId = path.replace("/api/qony/export/jobs/", "");
+    const parts = jobId.split("__");
+    const projectId = parts[1] ?? "";
+    const deliverableType = (parts[2] as DeliverableType) || "pitch_deck";
+    const preview = await mockGetExportPreview(
+      projectId,
+      deliverableType,
+    );
+    const exportJob: ExportJob = {
+      id: jobId,
+      project_id: projectId,
+      workspace_id: preview.data.workspace_id,
+      deliverable_type: deliverableType,
+      status: "completed",
+      graph_version_at_request: preview.data.graph_version ?? null,
+      manifest_version: preview.data.manifest_version ?? null,
+      slide_plan: preview.data.slide_plan ?? null,
+      warnings: preview.data.warnings,
+      html_artifact_path: null,
+      pdf_artifact_path: null,
+      error_message: null,
+      created_at: preview.data.generated_at,
+      updated_at: preview.data.generated_at,
+    };
+    return { data: exportJob } as ApiResponse<T>;
   }
 
   throw new QonyApiError(`Unsupported mock API route: ${method} ${path}`, 404);
@@ -208,5 +269,10 @@ export interface QonyGateway {
     payload: WorkspaceMutationRequest,
   ) => Promise<WorkspaceMutationResult>;
   chatWorkspace: (payload: WorkspaceChatRequest) => Promise<WorkspaceChatResponse>;
-  getExportPreview: (projectId: string) => Promise<ExportPreviewPayload>;
+  getExportPreview: (
+    projectId: string,
+    deliverableType?: DeliverableType,
+  ) => Promise<ExportPreviewPayload>;
+  createExportJob: (payload: ExportJobCreateRequest) => Promise<ExportJob>;
+  getExportJob: (jobId: string) => Promise<ExportJob>;
 }

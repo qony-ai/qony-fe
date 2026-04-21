@@ -2,6 +2,9 @@ import {
   type ApiErrorResponse,
   type ApiResponse,
   type DeleteResult,
+  type DeliverableType,
+  type ExportJob,
+  type ExportJobCreateRequest,
   type ExportPreviewPayload,
   type IngestPayload,
   type IngestRequest,
@@ -146,10 +149,23 @@ export function buildApiClient(fetcher: Fetcher) {
         })
       ).data;
     },
-    async getExportPreview(projectId: string) {
+    async getExportPreview(projectId: string, deliverableType?: DeliverableType) {
       return (
-        await fetcher<ExportPreviewPayload>(apiEndpoints.exportPreview(projectId))
+        await fetcher<ExportPreviewPayload>(
+          apiEndpoints.exportPreview(projectId, deliverableType),
+        )
       ).data;
+    },
+    async createExportJob(payload: ExportJobCreateRequest) {
+      return (
+        await fetcher<ExportJob>(apiEndpoints.exportJobs, {
+          method: "POST",
+          body: JSON.stringify(payload),
+        })
+      ).data;
+    },
+    async getExportJob(jobId: string) {
+      return (await fetcher<ExportJob>(apiEndpoints.exportJob(jobId))).data;
     },
   };
 }

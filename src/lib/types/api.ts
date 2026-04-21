@@ -252,16 +252,61 @@ export interface IngestPayload {
 }
 
 export type DeliverableType = "pitch_deck" | "business_document";
+export type ExportJobStatus =
+  | "pending"
+  | "planning"
+  | "rendering"
+  | "completed"
+  | "failed";
+
+export interface ExportSlideStep {
+  component_key: string;
+  title: string;
+  variables: Record<string, unknown>;
+  source_node_ids: string[];
+}
+
+export interface ExportSlidePlan {
+  deliverable_type: DeliverableType;
+  manifest_version: string;
+  steps: ExportSlideStep[];
+  warnings: string[];
+}
 
 export interface ExportPreviewPayload {
   snapshot_id: string;
   project_id: string;
   workspace_id: string;
+  project_name: string;
   generated_at: string;
   graph_version?: number | null;
   deliverable_type?: DeliverableType | null;
-  status: "stub";
+  manifest_version?: string | null;
+  slide_plan?: ExportSlidePlan | null;
+  status: "ready" | "stub";
   warnings: string[];
+}
+
+export interface ExportJobCreateRequest {
+  project_id: string;
+  deliverable_type: DeliverableType;
+}
+
+export interface ExportJob {
+  id: string;
+  project_id: string;
+  workspace_id: string;
+  deliverable_type: DeliverableType;
+  status: ExportJobStatus;
+  graph_version_at_request?: number | null;
+  manifest_version?: string | null;
+  slide_plan?: ExportSlidePlan | null;
+  warnings: string[];
+  html_artifact_path?: string | null;
+  pdf_artifact_path?: string | null;
+  error_message?: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface NodeDraft {

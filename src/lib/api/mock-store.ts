@@ -2,7 +2,9 @@ import {
   type AddEdgeCommand,
   type AddNodeCommand,
   type ApiResponse,
+  type DeliverableType,
   type EdgeRelationType,
+  type ExportSlidePlan,
   type ExportPreviewPayload,
   type GraphEdge,
   type GraphMetadata,
@@ -534,7 +536,192 @@ function summarizeValidationIssues(issues: GraphValidationIssue[]) {
     .join(" ");
 }
 
-function buildExportPreview(workspace: WorkspacePayload): ExportPreviewPayload {
+function buildMockSlidePlan(
+  workspace: WorkspacePayload,
+  deliverableType: DeliverableType,
+): ExportSlidePlan {
+  const nodes = workspace.graph.nodes;
+  const project = readProject(workspace.project_id);
+  const problem = nodes.find((node) => node.type === "problem");
+  const solution = nodes.find(
+    (node) =>
+      node.type === "solution" ||
+      node.type === "objective" ||
+      node.type === "opportunity",
+  );
+  const evidence = nodes.find(
+    (node) =>
+      node.type === "evidence" ||
+      node.type === "metric" ||
+      node.type === "market_data" ||
+      node.type === "trend",
+  );
+  const riskNodes = nodes.filter(
+    (node) => node.type === "risk" || node.type === "constraint",
+  );
+
+  if (deliverableType === "pitch_deck") {
+    return {
+      deliverable_type: deliverableType,
+      manifest_version: "mock-0.1.0",
+      warnings: [],
+      steps: [
+        {
+          component_key: "pitch_deck.cover",
+          title: project.name,
+          source_node_ids: problem ? [problem.id] : [],
+          variables: {
+            title: project.name,
+            tagline:
+              project.description ||
+              problem?.title ||
+              "Structured export generated from the mock workspace.",
+            author: "Qony mock",
+            date: nowIso().slice(0, 10),
+          },
+        },
+        {
+          component_key: "pitch_deck.problem",
+          title: problem?.title || "Problem framing",
+          source_node_ids: problem ? [problem.id] : [],
+          variables: {
+            main_problem:
+              problem?.title || "Problem statement is not defined yet.",
+            sub_points: nodes
+              .filter(
+                (node) =>
+                  node.id !== problem?.id &&
+                  (node.type === "problem" ||
+                    node.type === "assumption" ||
+                    node.type === "risk"),
+              )
+              .slice(0, 4)
+              .map((node) => node.title),
+            statistic: evidence
+              ? `${evidence.title}: ${evidence.description}`
+              : null,
+          },
+        },
+        {
+          component_key: "pitch_deck.solution",
+          title: solution?.title || "Recommended approach",
+          source_node_ids: solution ? [solution.id] : [],
+          variables: {
+            headline: solution?.title || "Recommendation is not defined yet.",
+            description:
+              solution?.description ||
+              "Add solution or objective nodes to strengthen the narrative.",
+            key_points: nodes
+              .filter(
+                (node) =>
+                  node.id !== solution?.id &&
+                  (node.type === "solution" ||
+                    node.type === "objective" ||
+                    node.type === "opportunity"),
+              )
+              .slice(0, 4)
+              .map((node) => node.title),
+          },
+        },
+        {
+          component_key: "pitch_deck.closing",
+          title: "Next decision checkpoint",
+          source_node_ids: [],
+          variables: {
+            headline: "Ready for review and export.",
+            ask:
+              solution?.description ||
+              "Confirm the strongest branch and generate the next export revision.",
+            contact: "mock@qony.ai",
+          },
+        },
+      ],
+    };
+  }
+
+  return {
+    deliverable_type: deliverableType,
+    manifest_version: "mock-0.1.0",
+    warnings: [],
+    steps: [
+      {
+        component_key: "business_document.executive_summary",
+        title: "Executive summary",
+        source_node_ids: [problem?.id, solution?.id].filter(Boolean) as string[],
+        variables: {
+          title: "Executive summary",
+          summary:
+            project.description ||
+            solution?.description ||
+            "Mock export summary generated from the current workspace.",
+          highlights: nodes.slice(0, 4).map((node) => node.title),
+        },
+      },
+      {
+        component_key: "business_document.problem_analysis",
+        title: problem?.title || "Problem analysis",
+        source_node_ids: problem ? [problem.id] : [],
+        variables: {
+          title: problem?.title || "Problem analysis",
+          body:
+            problem?.description ||
+            "The mock workspace does not yet include a fully-defined problem analysis.",
+          evidence: evidence ? [`${evidence.title}: ${evidence.description}`] : [],
+        },
+      },
+      {
+        component_key: "business_document.recommendation",
+        title: solution?.title || "Recommendation",
+        source_node_ids: solution ? [solution.id] : [],
+        variables: {
+          title: solution?.title || "Recommendation",
+          body:
+            solution?.description ||
+            "Add solution nodes to complete the recommendation section.",
+          next_steps: nodes
+            .filter(
+              (node) =>
+                node.id !== solution?.id &&
+                (node.type === "objective" ||
+                  node.type === "opportunity" ||
+                  node.type === "resource"),
+            )
+            .slice(0, 4)
+            .map((node) => node.title),
+        },
+      },
+      {
+        component_key: "business_document.risk_register",
+        title: "Risk register",
+        source_node_ids: riskNodes.map((node) => node.id),
+        variables: {
+          title: "Risk register",
+          risks:
+            riskNodes.length > 0
+              ? riskNodes.slice(0, 5).map((node) => ({
+                  title: node.title,
+                  description: node.description,
+                  mitigation: null,
+                }))
+              : [
+                  {
+                    title: "Sparse workspace coverage",
+                    description:
+                      "The current mock workspace does not include explicit risk nodes.",
+                    mitigation:
+                      "Add risk or constraint nodes before sharing the export externally.",
+                  },
+                ],
+        },
+      },
+    ],
+  };
+}
+
+function buildExportPreview(
+  workspace: WorkspacePayload,
+  deliverableType: DeliverableType = "pitch_deck",
+): ExportPreviewPayload {
   const validation = workspace.graph.metadata.validation;
   const warnings = [
     ...(!validation.is_valid
@@ -546,16 +733,20 @@ function buildExportPreview(workspace: WorkspacePayload): ExportPreviewPayload {
       ? ["Workspace is empty. Seed at least one problem node before exporting."]
       : []),
   ];
+  const slidePlan = buildMockSlidePlan(workspace, deliverableType);
 
   return {
     snapshot_id: `snapshot-${workspace.project_id}-${workspace.graph.metadata.version}`,
     project_id: workspace.project_id,
     workspace_id: workspace.workspace_id,
+    project_name: readProject(workspace.project_id).name,
     generated_at: nowIso(),
     graph_version: workspace.graph.metadata.version,
-    deliverable_type: null,
-    status: "stub",
-    warnings,
+    deliverable_type: deliverableType,
+    manifest_version: slidePlan.manifest_version,
+    slide_plan: slidePlan,
+    status: "ready",
+    warnings: [...warnings, ...slidePlan.warnings],
   };
 }
 
@@ -1474,8 +1665,9 @@ export async function mockChatWorkspace(
 
 export async function mockGetExportPreview(
   projectId: string,
+  deliverableType: DeliverableType = "pitch_deck",
 ): Promise<ApiResponse<ExportPreviewPayload>> {
-  return { data: buildExportPreview(readWorkspace(projectId)) };
+  return { data: buildExportPreview(readWorkspace(projectId), deliverableType) };
 }
 
 export function getMockWorkspace(projectId: string) {
