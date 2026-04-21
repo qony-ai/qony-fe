@@ -103,6 +103,10 @@ export function WorkspaceClient({ initialWorkspace }: WorkspaceClientProps) {
   const [isResizingSidebar, setIsResizingSidebar] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [exportFormat, setExportFormat] = useState<"pitch" | "document">("pitch");
+  const [exportState, setExportState] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [exportUrl, setExportUrl] = useState<string | null>(null);
 
   const nodes = workspace.graph.nodes;
   const edges = workspace.graph.edges;
@@ -537,13 +541,30 @@ export function WorkspaceClient({ initialWorkspace }: WorkspaceClientProps) {
     });
   }
 
-  function handleExportGraphPdf() {
-    const url = `/export/graph/${workspace.project_id}?autoprint=1`;
-    const popup = window.open(url, "_blank", "noopener,noreferrer");
+  function openExportModal() {
+    setExportModalOpen(true);
+    setExportState("idle");
+    setExportUrl(null);
+  }
 
-    if (!popup) {
-      window.location.href = url;
-    }
+  function closeExportModal() {
+    setExportModalOpen(false);
+    setExportState("idle");
+    setExportUrl(null);
+  }
+
+  function handleGenerateExport() {
+    const url =
+      exportFormat === "pitch"
+        ? `/export/preview/${workspace.project_id}`
+        : `/export/graph/${workspace.project_id}?autoprint=1`;
+
+    setExportState("loading");
+    setExportUrl(url);
+
+    window.setTimeout(() => {
+      setExportState("ready");
+    }, 1800);
   }
 
   function handleChat() {
@@ -820,7 +841,7 @@ export function WorkspaceClient({ initialWorkspace }: WorkspaceClientProps) {
                 <SidebarSection title="Validation">
                   {validation.is_valid ? (
                     <div className="rounded-2xl border border-emerald-300/18 bg-emerald-300/10 px-4 py-3 text-sm leading-6 text-emerald-50">
-                      The DAG is structurally valid. Complete branches can be exported once they reach Rank 6.
+                      The graph is structurally valid. Complete branches can be exported once they reach the final level.
                     </div>
                   ) : (
                     <div className="grid gap-3">
@@ -952,7 +973,7 @@ export function WorkspaceClient({ initialWorkspace }: WorkspaceClientProps) {
                         </div>
                         <p className="mt-2 text-xs leading-5 text-white/58">
                           Suggestions are generated from the closest hypothesis in the
-                          selected branch so the framework stays aligned to the DAG.
+                          selected branch so the framework stays aligned to the graph.
                         </p>
                       </div>
 
@@ -1275,15 +1296,142 @@ export function WorkspaceClient({ initialWorkspace }: WorkspaceClientProps) {
                     Export preview
                   </Button>
                 </Link>
-                <Button className="w-full" onClick={handleExportGraphPdf} variant="secondary">
+                <Button className="w-full" onClick={openExportModal} variant="secondary">
                   <Download className="size-4" />
-                  Graph PDF
+                  Export
                 </Button>
               </div>
             </div>
           ) : null}
         </aside>
       </div>
+
+      {exportModalOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm"
+          onClick={closeExportModal}
+        >
+          <div
+            className="w-full max-w-md rounded-[28px] border border-emerald-200/14 bg-[linear-gradient(180deg,rgba(9,61,49,0.98),rgba(8,47,39,0.98))] p-6 shadow-[0_32px_80px_rgba(0,0,0,0.52)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="font-mono text-[11px] uppercase tracking-[0.28em] text-emerald-200/54">
+              Export project
+            </p>
+            <h2 className="mt-3 text-xl font-semibold tracking-[-0.03em] text-white">
+              Choose export format
+            </h2>
+
+            {exportState === "idle" || exportState === "loading" ? (
+              <div className="mt-5 grid gap-3">
+                <p className="text-sm text-white/54">Format</p>
+
+                {(
+                  [
+                    {
+                      id: "pitch",
+                      label: "Pitch Deck",
+                      sub: "Slide-style narrative preview",
+                    },
+                    {
+                      id: "document",
+                      label: "Business Document",
+                      sub: "Graph PDF, A4 landscape",
+                    },
+                  ] as const
+                ).map((option) => (
+                  <button
+                    className={cn(
+                      "flex items-start gap-3 rounded-[20px] border px-4 py-4 text-left transition",
+                      exportFormat === option.id
+                        ? "border-emerald-300/32 bg-emerald-300/10"
+                        : "border-emerald-200/10 bg-emerald-300/5 hover:bg-emerald-300/8",
+                    )}
+                    disabled={exportState === "loading"}
+                    key={option.id}
+                    onClick={() => setExportFormat(option.id)}
+                    type="button"
+                  >
+                    <span
+                      className={cn(
+                        "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border-2",
+                        exportFormat === option.id
+                          ? "border-emerald-400 bg-emerald-400"
+                          : "border-emerald-200/36 bg-transparent",
+                      )}
+                    />
+                    <div>
+                      <p className="text-sm font-semibold text-white">
+                        {option.label}
+                      </p>
+                      <p className="mt-0.5 text-xs text-white/54">{option.sub}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+
+            {exportState === "loading" ? (
+              <div className="mt-5 flex items-center gap-3 rounded-[18px] border border-emerald-200/10 bg-emerald-300/6 px-4 py-4">
+                <LoaderCircle className="size-4 shrink-0 animate-spin text-emerald-300" />
+                <p className="text-sm text-white/72">Preparing your export…</p>
+              </div>
+            ) : null}
+
+            {exportState === "ready" && exportUrl ? (
+              <div className="mt-5 grid gap-3">
+                <div className="rounded-[18px] border border-emerald-300/22 bg-emerald-300/8 px-4 py-4">
+                  <p className="text-sm font-semibold text-emerald-50">Export ready</p>
+                  <p className="mt-1 text-xs text-white/56">
+                    Your export has been generated. Open the link below to view
+                    and save as PDF from your browser.
+                  </p>
+                </div>
+                <a
+                  className="inline-flex items-center justify-center gap-2 rounded-[18px] border border-emerald-300/22 bg-emerald-300/10 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-300/16"
+                  href={exportUrl}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  <Download className="size-4" />
+                  Open export →
+                </a>
+              </div>
+            ) : null}
+
+            {exportState === "error" ? (
+              <div className="mt-5 rounded-[18px] border border-red-300/18 bg-red-300/8 px-4 py-4">
+                <p className="text-sm font-semibold text-red-200">Export failed</p>
+                <p className="mt-1 text-xs text-white/56">
+                  Something went wrong while preparing the export. Try again.
+                </p>
+              </div>
+            ) : null}
+
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <Button
+                onClick={closeExportModal}
+                variant="secondary"
+              >
+                Cancel
+              </Button>
+              {exportState !== "ready" ? (
+                <Button
+                  disabled={exportState === "loading"}
+                  onClick={handleGenerateExport}
+                >
+                  {exportState === "loading" ? (
+                    <LoaderCircle className="size-4 animate-spin" />
+                  ) : (
+                    <Download className="size-4" />
+                  )}
+                  Generate PDF →
+                </Button>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

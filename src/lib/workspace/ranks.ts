@@ -1,7 +1,7 @@
-import type { NodeRank } from "@/src/lib/types/api";
+import type { NodeLevel } from "@/src/lib/types/api";
 
 export interface RankDefinition {
-  rank: NodeRank;
+  rank: NodeLevel;
   title: string;
   shortTitle: string;
   description: string;
@@ -71,13 +71,13 @@ export const orderedRanks = rankDefinitions.map(
   (definition) => definition.rank,
 );
 
-export function getRankDefinition(rank: NodeRank) {
+export function getRankDefinition(rank: NodeLevel) {
   return (
     rankDefinitions.find((definition) => definition.rank === rank) ??
     rankDefinitions[0]
   );
 }
 
-export function getNextRank(rank: NodeRank): NodeRank | null {
-  return rank < 6 ? ((rank + 1) as NodeRank) : null;
+export function getNextRank(rank: NodeLevel): NodeLevel | null {
+  return rank < 6 ? ((rank + 1) as NodeLevel) : null;
 }

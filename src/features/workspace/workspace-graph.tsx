@@ -21,7 +21,7 @@ import {
 } from "@xyflow/react";
 import { Eye, Plus } from "lucide-react";
 
-import type { GraphNode, NodeRank, WorkspaceGraph } from "@/src/lib/types/api";
+import type { GraphNode, NodeLevel, WorkspaceGraph } from "@/src/lib/types/api";
 import { cn, truncate } from "@/src/lib/utils";
 import {
   clampCanvasPosition,
@@ -48,7 +48,7 @@ interface WorkspaceNodeData extends Record<string, unknown> {
   kind: string;
   onInspectNode: (nodeId: string) => void;
   onQuickAddNode: (nodeId: string) => void;
-  rank: NodeRank;
+  rank: NodeLevel;
   source: GraphNode["source"];
   title: string;
 }

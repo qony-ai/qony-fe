@@ -1,7 +1,7 @@
 export type ProjectStatus = "draft" | "active" | "archived";
 export type NodeSource = "manual" | "ingest" | "ai";
 export type MutationActor = "user" | "ai";
-export type NodeRank = 1 | 2 | 3 | 4 | 5 | 6;
+export type NodeLevel = 1 | 2 | 3 | 4 | 5 | 6;
 
 export interface ResponseMeta {
   request_id?: string | null;
@@ -45,7 +45,7 @@ export interface GraphValidationSummary {
 
 export interface GraphNode {
   id: string;
-  rank: NodeRank;
+  rank: NodeLevel;
   kind: string;
   title: string;
   content?: string | null;
@@ -195,7 +195,7 @@ export interface IngestPayload {
 
 export interface ExportStep {
   node_id: string;
-  rank: NodeRank;
+  rank: NodeLevel;
   kind: string;
   title: string;
   content?: string | null;
@@ -219,7 +219,7 @@ export interface ExportPreviewPayload {
 
 export interface NodeDraft {
   id?: string;
-  rank: NodeRank;
+  rank: NodeLevel;
   title: string;
   content?: string | null;
   source?: NodeSource;
@@ -243,7 +243,7 @@ export interface AddNodeCommand {
 export interface UpdateNodeCommand {
   type: "update_node";
   node_id: string;
-  rank?: NodeRank;
+  rank?: NodeLevel;
   title?: string;
   content?: string | null;
   source?: NodeSource;
@@ -273,7 +273,7 @@ export interface MoveNodeCommand {
   type: "move_node";
   node_id: string;
   position?: Position;
-  rank?: NodeRank;
+  rank?: NodeLevel;
 }
 
 export type PatchCommand =

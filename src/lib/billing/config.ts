@@ -17,7 +17,7 @@ export const pricingPlans: PricingPlan[] = [
   {
     billing: "For individual analysts exploring structured case work",
     bullets: [
-      "Core six-rank workspace and project dashboard",
+      "Core structured workspace and project dashboard",
       "Standard ingest, graph editing, and protected routes",
       "Basic export preview for one-account workflows",
       "Pricing and billing visibility inside the app",

@@ -1,51 +1,22 @@
 import type { Metadata } from "next";
 import type { Viewport } from "next";
-import localFont from "next/font/local";
+import { IBM_Plex_Mono, Instrument_Sans } from "next/font/google";
 
 import "./globals.css";
 
-const plusJakartaSans = localFont({
+const plusJakartaSans = Instrument_Sans({
   variable: "--font-plus-jakarta-sans",
   display: "swap",
-  src: [
-    {
-      path: "../.agents/skills/canvas-design/canvas-fonts/InstrumentSans-Regular.ttf",
-      weight: "400",
-      style: "normal",
-    },
-    {
-      path: "../.agents/skills/canvas-design/canvas-fonts/InstrumentSans-Italic.ttf",
-      weight: "400",
-      style: "italic",
-    },
-    {
-      path: "../.agents/skills/canvas-design/canvas-fonts/InstrumentSans-Bold.ttf",
-      weight: "700",
-      style: "normal",
-    },
-    {
-      path: "../.agents/skills/canvas-design/canvas-fonts/InstrumentSans-BoldItalic.ttf",
-      weight: "700",
-      style: "italic",
-    },
-  ],
+  subsets: ["latin"],
+  weight: ["400", "700"],
+  style: ["normal", "italic"],
 });
 
-const plexMono = localFont({
+const plexMono = IBM_Plex_Mono({
   variable: "--font-plex-mono",
   display: "swap",
-  src: [
-    {
-      path: "../.agents/skills/canvas-design/canvas-fonts/IBMPlexMono-Regular.ttf",
-      weight: "400",
-      style: "normal",
-    },
-    {
-      path: "../.agents/skills/canvas-design/canvas-fonts/IBMPlexMono-Bold.ttf",
-      weight: "700",
-      style: "normal",
-    },
-  ],
+  subsets: ["latin"],
+  weight: ["400", "700"],
 });
 
 export const metadata: Metadata = {
@@ -54,7 +25,7 @@ export const metadata: Metadata = {
     template: "%s | Qony AI",
   },
   description:
-    "Qony AI is a structured six-rank reasoning workspace for ingesting source material, mapping logic, and exporting decision-ready narratives.",
+    "Qony AI is a structured reasoning workspace for ingesting source material, mapping logic, and exporting decision-ready narratives.",
 };
 
 export const viewport: Viewport = {

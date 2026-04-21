@@ -12,7 +12,7 @@ import {
   type IngestPayload,
   type IngestRequest,
   type MutationCommand,
-  type NodeRank,
+  type NodeLevel,
   type ProjectCreateRequest,
   type ProjectDetail,
   type ProjectListPayload,
@@ -48,7 +48,7 @@ interface SeedProject {
   status: ProjectSummary["status"];
   nodes: Array<{
     id: string;
-    rank: NodeRank;
+    rank: NodeLevel;
     title: string;
     content: string;
     branchIndex?: number;
@@ -376,7 +376,7 @@ function createGraphNode({
   offset,
 }: {
   id: string;
-  rank: NodeRank;
+  rank: NodeLevel;
   title: string;
   content: string;
   source: GraphNode["source"];
@@ -911,7 +911,7 @@ function buildIngestWorkspace(
 ): WorkspacePayload {
   const text =
     input.raw_text.trim() ||
-    "Uploaded material captured. Build the structured DAG from the extracted evidence.";
+    "Uploaded material captured. Build the structured graph from the extracted evidence.";
   const focusSentence = text.split(/[.!?]/).find(Boolean)?.trim() ?? project.name;
   const branchIndexA = 0;
   const branchIndexB = 1;
@@ -1032,7 +1032,7 @@ function appendIngestToWorkspace(
 
   const text =
     input.raw_text.trim() ||
-    "Uploaded material captured. Build the structured DAG from the extracted evidence.";
+    "Uploaded material captured. Build the structured graph from the extracted evidence.";
   const focusSentence = text.split(/[.!?]/).find(Boolean)?.trim() ?? project.name;
   const timestamp = nowIso();
   const nextBranchIndex =

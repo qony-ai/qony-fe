@@ -1,6 +1,6 @@
 import dagre from "dagre";
 
-import type { GraphEdge, GraphNode, NodeRank, WorkspaceGraph } from "@/src/lib/types/api";
+import type { GraphEdge, GraphNode, NodeLevel, WorkspaceGraph } from "@/src/lib/types/api";
 
 export const graphNodeWidth = 256;
 export const graphNodeHeight = 168;
@@ -9,12 +9,12 @@ export const graphRowGap = 220;
 export const graphSnapSize = 24;
 export const graphNodeVerticalGap = 72;
 
-export function getColumnX(rank: NodeRank) {
+export function getColumnX(rank: NodeLevel) {
   return (rank - 1) * graphColumnWidth;
 }
 
 export function snapNodePosition(
-  rank: NodeRank,
+  rank: NodeLevel,
   position: { x: number; y: number },
 ) {
   return {
@@ -57,12 +57,12 @@ export function autoLayoutGraph(nodes: GraphNode[], edges: GraphEdge[]) {
   dagre.layout(graph);
 
   const preferredByRank = new Map<
-    NodeRank,
+    NodeLevel,
     Array<{
       branchIndex: number;
       id: string;
       preferredY: number;
-      rank: NodeRank;
+      rank: NodeLevel;
     }>
   >();
 
@@ -172,7 +172,7 @@ export function getSuggestedChildPosition({
 }: {
   parent: GraphNode | null;
   siblings: GraphNode[];
-  rank: NodeRank;
+  rank: NodeLevel;
 }) {
   if (!parent) {
     return {

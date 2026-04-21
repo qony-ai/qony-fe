@@ -256,7 +256,7 @@ export function ProjectDetailClient({
 
           <Panel className="rounded-[30px] p-5 md:p-6">
             <PanelHeader
-              description="This is the main route structure for the case: prepare context, edit the DAG, then export the output."
+              description="This is the main route structure for the case: prepare context, edit the graph, then export the output."
               eyebrow="Case flow"
               title="Next actions"
             />
@@ -308,7 +308,7 @@ export function ProjectDetailClient({
         <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
           <Panel className="rounded-[30px] p-5 md:p-6">
             <PanelHeader
-              description="This is the current coverage of the structured DAG inside the workspace."
+              description="This is the current coverage of the structured graph inside the workspace."
               eyebrow="Rank coverage"
               title="Graph distribution"
             />
