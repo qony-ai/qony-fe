@@ -355,7 +355,7 @@ function WorkspaceNode({
 
       <div className="mt-4 flex items-center justify-between gap-3">
         <p className="text-[11px] uppercase tracking-[0.16em] text-white/36">
-          {data.kind.replaceAll("-", " ")}
+          {(data.kind ?? "").replaceAll("-", " ")}
         </p>
         <div
           className="h-px flex-1"
